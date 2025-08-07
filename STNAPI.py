@@ -1,19 +1,27 @@
 import basedosdados as bd
 import pandas as pd
 import os
+import pprint
 from save import save_dataframe
+from dotenv import load_dotenv
 
-bd.config.billing_project_id = "deapython"
 
+# Access Key for basedosdados
+load_dotenv()
+bd.config.billing_project_id = os.getenv(billing_project_id)
+
+# Search tool for basedosdados
 search = bd.search("população")
 pprint.pprint(search)
 
+# PIB DataFrame
 df_pib = bd.read_table(
     dataset_id="br_ibge_pib",
     table_id="municipio"
 )
 print(df_pib.head)
 
+# Population DataFrame
 df_pop = bd.read_table(
     dataset_id="br_ibge_populacao",
     table_id="municipio"
