@@ -1,5 +1,4 @@
 import basedosdados as bd
-import pandas as pd
 import os
 from save import save_dataframe
 from dotenv import load_dotenv

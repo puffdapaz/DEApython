@@ -1,9 +1,6 @@
 import os
-
+# Creates folders from a list of folder paths (relative or absolute).
 def create_folders(folders):
-    """
-    Creates folders from a list of folder paths (relative or absolute).
-    """
     for path in folders:
         try:
             os.makedirs(path, exist_ok=True)
@@ -19,7 +16,6 @@ if __name__ == "__main__":
         "data/processed/gold",
         "data/output",
         "docs",
-        "notebooks",
         "scripts",
         "tests"
     ]
