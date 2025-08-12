@@ -173,6 +173,61 @@ LEFT JOIN abandono a ON p.id_municipio = a.id_municipio AND p.ano = a.ano
 
 try:
     combined_df = bd.read_sql(silver_df)
-    save_dataframe(combined_df, "silver_data", directory="data/processed/silver")
+    
+    # Define value columns (same as before)
+    value_columns = [
+        'gastos_educacao', 'quantidade_matricula',
+        'ideb_iniciais', 'ideb_finais', 
+        'taxa_abandono_ef_anos_iniciais', 'taxa_abandono_ef_anos_finais',
+        'pib_per_capita', 'gasto_por_aluno'
+    ]
+    
+    # Step 1: Identify cities with ANY nulls in ANY year
+    cities_with_nulls = combined_df[
+        combined_df[value_columns].isnull().any(axis=1)
+    ]['id_municipio'].unique()
+    
+    # Step 2: Split the data
+    incomplete_cases = combined_df[
+        combined_df['id_municipio'].isin(cities_with_nulls)
+    ]
+    
+    complete_cases = combined_df[
+        (~combined_df['id_municipio'].isin(cities_with_nulls)) &
+        (~combined_df[value_columns].isnull().any(axis=1))
+    ]
+    
+    # Verify we haven't lost any cities (just redistributed)
+    assert len(complete_cases) + len(incomplete_cases) == len(combined_df)
+    
+    # Step 3: Additional check - ensure complete cases have both years
+    cities_with_both_years = complete_cases.groupby('id_municipio')['ano'].nunique()
+    complete_cases = complete_cases[
+        complete_cases['id_municipio'].isin(
+            cities_with_both_years[cities_with_both_years == 2].index
+        )
+    ]
+    
+    # Save results
+    save_dataframe(
+        complete_cases, 
+        "gold_data_complete_cases", 
+        directory="data/processed/gold", 
+        file_format="csv"
+    )
+    
+    save_dataframe(
+        incomplete_cases, 
+        "gold_data_incomplete_cases", 
+        directory="data/processed/gold", 
+        file_format="csv"
+    )
+    
+    # Print diagnostics
+    print(f"Complete cases (both years, no nulls): {len(complete_cases)} rows")
+    print(f"Unique cities in complete cases: {complete_cases['id_municipio'].nunique()}")
+    print(f"Incomplete cases: {len(incomplete_cases)} rows")
+    print(f"Unique cities in incomplete cases: {incomplete_cases['id_municipio'].nunique()}")
+    
 except Exception as e:
-    print(f"Error in combined query: {str(e)}")
+    print(f"Error in processing: {str(e)}")

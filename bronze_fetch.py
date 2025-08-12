@@ -83,4 +83,4 @@ raw_dfs = {
 
 # Loop over dictionary using created function to save each DataFrame
 for filename, df in raw_dfs.items():
-    save_dataframe(df, filename, file_format="csv")
+    save_dataframe(df, filename)
