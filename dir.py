@@ -17,6 +17,7 @@ if __name__ == "__main__":
         "data/output",
         "docs",
         "scripts",
+        "credentials",
         "tests"
     ]
     create_folders(folders)

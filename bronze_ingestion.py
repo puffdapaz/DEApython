@@ -1,11 +1,12 @@
 import basedosdados as bd
 import os
-from save import save_dataframe
+from save import save_dataframe, save_dataframe_to_gcs
 from dotenv import load_dotenv
 
 # Access Key for basedosdados
 load_dotenv()
 bd.config.billing_project_id = os.getenv("billing_project_id")
+bucket_name = os.getenv("gcp_bucket_name")
 
 
 # População filtered DataFrame
@@ -84,3 +85,4 @@ raw_dfs = {
 # Loop over dictionary using created function to save each DataFrame
 for filename, df in raw_dfs.items():
     save_dataframe(df, filename)
+    save_dataframe_to_gcs(df, filename, bucket_name, layer="bronze")
