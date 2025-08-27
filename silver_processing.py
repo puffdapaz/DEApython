@@ -1,11 +1,12 @@
 import basedosdados as bd
 import os
-from save import save_dataframe
+from save import save_dataframe, save_dataframe_to_gcs
 from dotenv import load_dotenv
 
 # Access Key for basedosdados
 load_dotenv()
 bd.config.billing_project_id = os.getenv("billing_project_id")
+bucket_name = os.getenv("gcp_bucket_name")
 
 silver_df = """
 WITH 
@@ -174,5 +175,6 @@ LEFT JOIN abandono a ON p.id_municipio = a.id_municipio AND p.ano = a.ano
 try:
     combined_df = bd.read_sql(silver_df)
     save_dataframe(combined_df, "silver_data", directory="data/processed/silver")
+    save_dataframe_to_gcs(combined_df, "silver_data", bucket_name, layer="silver")
 except Exception as e:
     print(f"Error in combined query: {str(e)}")

@@ -75,4 +75,4 @@ def save_dataframe_to_gcs(
     # Upload to GCS
     blob.upload_from_filename(tmp_file)
 
-    print(f"✅ Uploaded {filename}.{file_format} to gs://{bucket_name}/{layer}/")
+    print(f"✅ Uploaded {filename}.{file_format} to GCP://{bucket_name}/{layer}/")
