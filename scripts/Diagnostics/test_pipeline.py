@@ -6,12 +6,15 @@ Runs ETL → DEA analysis → Saves results.
 from etl import run_gold_etl
 from dea_analyzer import perform_dea_analysis
 from save_utils import save_dataframe, save_summary
-
+from etl import run_bronze_etl, run_silver_etl, run_gold_etl
+from dea_analyzer import perform_dea_analysis
 
 def test_pipeline():
-    # 1. Run ETL (creates processed gold dataset)
-    df = run_gold_etl()
-    print("✅ ETL finished. Shape:", df.shape)
+    # 1. Run ETL
+    for func in [run_bronze_etl, run_silver_etl, run_gold_etl]:
+        df = func()
+        assert not df.empty, f"{func.__name__} returned empty dataframe"
+        print(f"{func.__name__} shape: {df.shape}")
 
     # 2. Run DEA analysis
     results, efficiency_analysis = perform_dea_analysis()

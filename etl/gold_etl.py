@@ -2,7 +2,8 @@ import basedosdados as bd
 import os
 import yaml
 import logging
-from typing import Dict, Optional
+import pandas as pd
+from typing import Dict, Optional, List
 from pathlib import Path
 from dotenv import load_dotenv
 from save import save_dataframe, save_dataframe_to_gcs
@@ -40,53 +41,56 @@ def setup_basedosdados() -> str:
     
     return bucket_name
 
-def get_silver_query() -> str:
-    """Return the silver layer SQL query."""
+def get_gold_query() -> str:
+    """Return the gold layer SQL query."""
     return """
 WITH 
--- Population data with validation
+-- Population data
 populacao AS (
   SELECT
     id_municipio,
     sigla_uf,
     ano,
     CASE
-      WHEN SAFE_CAST(populacao AS INT64) <= 0 THEN NULL
+      WHEN SAFE_CAST(populacao AS INT64) = 0 THEN NULL
+      WHEN SAFE_CAST(populacao AS INT64) < 0 THEN NULL
       ELSE SAFE_CAST(populacao AS INT64)
     END AS populacao
   FROM `basedosdados.br_ibge_populacao.municipio`
   WHERE ano IN (2017, 2019)
 ),
 
--- Municipality names
-municipio_names AS (
+-- names data
+name AS (
   SELECT 
     id_municipio,
     nome
   FROM `basedosdados.br_bd_diretorios_brasil.municipio`
 ),
 
--- GDP data with validation
+-- GDP data
 pib AS (
   SELECT 
     id_municipio,
     ano,
     CASE
-      WHEN SAFE_CAST(pib AS INT64) <= 0 THEN NULL
+      WHEN SAFE_CAST(pib AS INT64) = 0 THEN NULL
+      WHEN SAFE_CAST(pib AS INT64) < 0 THEN NULL
       ELSE SAFE_CAST(pib AS INT64)
     END AS pib
   FROM `basedosdados.br_ibge_pib.municipio`
   WHERE ano IN (2017, 2019)
 ),
 
--- Education expenses with validation
+-- Education expenses
 gastos_educ AS (
   SELECT 
     id_municipio,
     sigla_uf,
     ano,
     CASE
-      WHEN SAFE_CAST(valor AS INT64) <= 0 THEN NULL
+      WHEN SAFE_CAST(valor AS INT64) = 0 THEN NULL
+      WHEN SAFE_CAST(valor AS INT64) < 0 THEN NULL
       ELSE SAFE_CAST(valor AS INT64)
     END AS valor
   FROM `basedosdados.br_me_siconfi.municipio_despesas_funcao`
@@ -95,7 +99,7 @@ gastos_educ AS (
     AND conta = "Educação"
 ),
 
--- Enrollments with validation
+-- Enrollments
 matriculas AS (
   WITH validated_data AS (
     SELECT
@@ -104,7 +108,7 @@ matriculas AS (
       ano,
       CASE
         WHEN SAFE_CAST(quantidade_matricula AS INT64) IS NULL THEN NULL
-        WHEN SAFE_CAST(quantidade_matricula AS INT64) <= 0 THEN NULL
+        WHEN SAFE_CAST(quantidade_matricula AS INT64) < 0 THEN NULL
         ELSE SAFE_CAST(quantidade_matricula AS INT64)
       END AS validated_matricula
     FROM `basedosdados.br_inep_sinopse_estatistica_educacao_basica.etapa_ensino_serie`
@@ -121,7 +125,7 @@ matriculas AS (
   GROUP BY id_municipio, sigla_uf, ano
 ),
 
--- IDEB scores with validation
+-- IDEB scores
 ideb AS (
   WITH validated_data AS (
     SELECT
@@ -150,7 +154,7 @@ ideb AS (
   GROUP BY id_municipio, sigla_uf, ano
 ),
 
--- Abandonment rates with validation
+-- Abandonment rates
 abandono AS (
   SELECT 
     id_municipio, 
@@ -158,13 +162,11 @@ abandono AS (
     CASE
       WHEN SAFE_CAST(taxa_abandono_ef_anos_iniciais AS FLOAT64) IS NULL THEN NULL
       WHEN SAFE_CAST(taxa_abandono_ef_anos_iniciais AS FLOAT64) < 0 THEN NULL
-      WHEN SAFE_CAST(taxa_abandono_ef_anos_iniciais AS FLOAT64) > 100 THEN NULL
       ELSE SAFE_CAST(taxa_abandono_ef_anos_iniciais AS FLOAT64)
     END AS taxa_abandono_ef_anos_iniciais,
     CASE
       WHEN SAFE_CAST(taxa_abandono_ef_anos_finais AS FLOAT64) IS NULL THEN NULL
       WHEN SAFE_CAST(taxa_abandono_ef_anos_finais AS FLOAT64) < 0 THEN NULL
-      WHEN SAFE_CAST(taxa_abandono_ef_anos_finais AS FLOAT64) > 100 THEN NULL
       ELSE SAFE_CAST(taxa_abandono_ef_anos_finais AS FLOAT64)
     END AS taxa_abandono_ef_anos_finais
   FROM `basedosdados.br_inep_indicadores_educacionais.municipio`
@@ -173,13 +175,13 @@ abandono AS (
     AND localizacao = "total"
 )
 
--- Final combined query with derived metrics
+-- Final combined query
 SELECT 
   p.id_municipio,
   p.sigla_uf,
   p.ano,
-  n.nome AS municipio_nome,
   p.populacao,
+  n.nome,
   pb.pib,
   ge.valor AS gastos_educacao,
   m.quantidade_matricula,
@@ -187,134 +189,153 @@ SELECT
   i.ideb_finais,
   a.taxa_abandono_ef_anos_iniciais,
   a.taxa_abandono_ef_anos_finais,
-  
-  -- Derived metrics with comprehensive validation
-  CASE 
-    WHEN p.populacao IS NOT NULL AND p.populacao > 0 
-         AND pb.pib IS NOT NULL AND pb.pib > 0
+  -- Calculate derived metrics
+  CASE WHEN p.populacao IS NOT NULL AND p.populacao > 0 
      THEN ROUND(SAFE_CAST(pb.pib AS FLOAT64) / SAFE_CAST(p.populacao AS FLOAT64), 2)
      ELSE NULL 
-  END AS pib_per_capita,
-  
-  CASE 
-    WHEN m.quantidade_matricula IS NOT NULL AND m.quantidade_matricula > 0 
-         AND ge.valor IS NOT NULL AND ge.valor > 0
+END AS pib_per_capita,
+  CASE WHEN m.quantidade_matricula IS NOT NULL AND m.quantidade_matricula > 0 
      THEN ROUND(SAFE_CAST(ge.valor AS FLOAT64) / SAFE_CAST(m.quantidade_matricula AS FLOAT64), 2)
      ELSE NULL 
-  END AS gasto_por_aluno,
-  
-  -- Data quality flags
-  CASE WHEN p.populacao IS NULL THEN 1 ELSE 0 END AS flag_populacao_missing,
-  CASE WHEN pb.pib IS NULL THEN 1 ELSE 0 END AS flag_pib_missing,
-  CASE WHEN ge.valor IS NULL THEN 1 ELSE 0 END AS flag_gastos_missing,
-  CASE WHEN m.quantidade_matricula IS NULL THEN 1 ELSE 0 END AS flag_matriculas_missing,
-  CASE WHEN i.ideb_iniciais IS NULL OR i.ideb_finais IS NULL THEN 1 ELSE 0 END AS flag_ideb_missing,
-  CASE WHEN a.taxa_abandono_ef_anos_iniciais IS NULL OR a.taxa_abandono_ef_anos_finais IS NULL THEN 1 ELSE 0 END AS flag_abandono_missing
-
+END AS gasto_por_aluno
 FROM populacao p
 LEFT JOIN pib pb ON p.id_municipio = pb.id_municipio AND p.ano = pb.ano
-LEFT JOIN municipio_names n ON p.id_municipio = n.id_municipio
+LEFT JOIN name n ON p.id_municipio = n.id_municipio
 LEFT JOIN gastos_educ ge ON p.id_municipio = ge.id_municipio AND p.ano = ge.ano
 LEFT JOIN matriculas m ON p.id_municipio = m.id_municipio AND p.ano = m.ano
 LEFT JOIN ideb i ON p.id_municipio = i.id_municipio AND p.ano = i.ano
 LEFT JOIN abandono a ON p.id_municipio = a.id_municipio AND p.ano = a.ano
 """
 
-def validate_silver_data(df) -> bool:
-    """Validate silver data quality."""
+def validate_gold_data(df: pd.DataFrame, value_columns: List[str]) -> bool:
+    """Validate gold data quality."""
     if df is None or df.empty:
-        logger.error("Silver data is empty or None")
+        logger.error("Gold data is empty")
         return False
     
-    required_columns = [
-        'id_municipio', 'sigla_uf', 'ano', 'municipio_nome', 'populacao',
-        'pib', 'gastos_educacao', 'quantidade_matricula', 'ideb_iniciais',
-        'ideb_finais', 'taxa_abandono_ef_anos_iniciais', 'taxa_abandono_ef_anos_finais',
-        'pib_per_capita', 'gasto_por_aluno'
-    ]
-    
+    required_columns = ['id_municipio', 'sigla_uf', 'ano'] + value_columns
     missing_columns = set(required_columns) - set(df.columns)
+    
     if missing_columns:
         logger.error(f"Missing required columns: {missing_columns}")
         return False
     
-    # Check for reasonable data ranges
-    validation_checks = {
-        'populacao': (lambda x: x > 0, "Population should be positive"),
-        'pib': (lambda x: x > 0, "GDP should be positive"),
-        'gastos_educacao': (lambda x: x > 0, "Education spending should be positive"),
-        'quantidade_matricula': (lambda x: x > 0, "Enrollments should be positive"),
-        'ideb_iniciais': (lambda x: 0 <= x <= 10, "IDEB should be between 0-10"),
-        'ideb_finais': (lambda x: 0 <= x <= 10, "IDEB should be between 0-10"),
-        'taxa_abandono_ef_anos_iniciais': (lambda x: 0 <= x <= 100, "Dropout rate should be 0-100%"),
-        'taxa_abandono_ef_anos_finais': (lambda x: 0 <= x <= 100, "Dropout rate should be 0-100%")
-    }
-    
-    for col, (check_func, message) in validation_checks.items():
-        if col in df.columns:
-            invalid_count = df[df[col].notna() & ~df[col].apply(check_func)].shape[0]
-            if invalid_count > 0:
-                logger.warning(f"{invalid_count} records with invalid {col}: {message}")
-    
-    logger.info(f"Silver data validation passed. Shape: {df.shape}")
+    logger.info(f"Gold data validation passed. Shape: {df.shape}")
     return True
 
-def process_silver_data() -> Optional[bd.Table]:
-    """Process silver layer data."""
+def add_completeness_flags(df: pd.DataFrame, value_columns: List[str]) -> pd.DataFrame:
+    """Add completeness flags to the dataframe."""
+    df = df.copy()
+    
+    # Add simple completeness flag for each year
+    df['is_complete'] = df[value_columns].notnull().all(axis=1)
+    
+    # Add missing values count for analysis
+    df['missing_values_count'] = df[value_columns].isnull().sum(axis=1)
+    
+    return df
+
+def process_gold_data() -> Optional[pd.DataFrame]:
+    """Process gold layer data with completeness flags."""
     try:
-        logger.info("Starting silver data processing")
+        logger.info("Starting gold data processing")
         
         # Load configurations
         dea_config, paths = load_configs()
+        
+        # Get value columns from config
+        value_columns = dea_config.get('gold', {}).get('value_columns', [
+            'populacao', 'pib', 'gastos_educacao', 'quantidade_matricula',
+            'ideb_iniciais', 'ideb_finais', 
+            'taxa_abandono_ef_anos_iniciais', 'taxa_abandono_ef_anos_finais',
+            'pib_per_capita', 'gasto_por_aluno'
+        ])
         
         # Set up Base dos Dados
         bucket_name = setup_basedosdados()
         
         # Get and execute query
-        query = get_silver_query()
-        logger.info("Executing silver query...")
-        silver_df = bd.read_sql(query)
+        query = get_gold_query()
+        logger.info("Executing gold query...")
+        gold_df = bd.read_sql(query)
+        
+        # Add completeness flags
+        gold_df = add_completeness_flags(gold_df, value_columns)
         
         # Validate data
-        if not validate_silver_data(silver_df):
-            raise ValueError("Silver data validation failed")
+        if not validate_gold_data(gold_df, value_columns):
+            raise ValueError("Gold data validation failed")
         
         # Save data
-        local_path = Path("data/processed/silver")
+        local_path = Path("data/processed/gold")
         local_path.mkdir(parents=True, exist_ok=True)
         
-        save_dataframe(silver_df, "silver_data", directory=local_path)
-        save_dataframe_to_gcs(silver_df, "silver_data", bucket_name, layer="silver")
+        save_dataframe(gold_df, "gold_data_complete", directory=local_path)
+        save_dataframe_to_gcs(gold_df, "gold_data_complete", bucket_name, layer="gold")
         
-        logger.info("Silver data processing completed successfully")
-        return silver_df
+        logger.info("Gold data processing completed successfully")
+        return gold_df
         
     except Exception as e:
-        logger.error(f"Silver data processing failed: {e}")
+        logger.error(f"Gold data processing failed: {e}")
         return None
 
-def analyze_silver_data(df):
-    """Generate analysis of silver data."""
+def analyze_gold_data(df: pd.DataFrame):
+    """Generate analysis of gold data."""
     if df is None:
         return
     
-    logger.info("Silver Data Analysis:")
+    logger.info("Gold Data Analysis:")
     logger.info(f"Total records: {len(df)}")
-    logger.info(f"Years: {df['ano'].unique()}")
+    logger.info(f"Years: {sorted(df['ano'].unique())}")
     logger.info(f"States: {df['sigla_uf'].nunique()}")
     logger.info(f"Municipalities: {df['id_municipio'].nunique()}")
     
-    # Missing data analysis
-    flag_columns = [col for col in df.columns if col.startswith('flag_')]
-    for flag_col in flag_columns:
-        missing_count = df[flag_col].sum()
-        missing_pct = (missing_count / len(df)) * 100
-        logger.info(f"{flag_col}: {missing_count} records ({missing_pct:.1f}%)")
+    # Completeness analysis
+    if 'is_complete' in df.columns:
+        complete_by_year = df.groupby('ano')['is_complete'].mean()
+        logger.info("Completeness by year:")
+        for year, completeness in complete_by_year.items():
+            logger.info(f"  {year}: {completeness:.1%} complete")
+        
+        total_complete = df['is_complete'].mean()
+        logger.info(f"Overall completeness: {total_complete:.1%}")
 
 if __name__ == "__main__":
-    silver_df = process_silver_data()
-    if silver_df is not None:
-        analyze_silver_data(silver_df)
-        logger.info("Silver layer processing completed successfully")
+    gold_df = process_gold_data()
+    if gold_df is not None:
+        analyze_gold_data(gold_df)
+        
+        # Print comprehensive diagnostics
+        print("=== GOLD DATA COMPLETENESS ANALYSIS ===")
+        print(f"Total records: {len(gold_df)}")
+        print(f"Unique municipalities: {gold_df['id_municipio'].nunique()}")
+        print(f"Years covered: {sorted(gold_df['ano'].unique())}")
+        
+        if 'is_complete' in gold_df.columns:
+            print("\n--- Completeness Status ---")
+            complete_count = gold_df['is_complete'].sum()
+            incomplete_count = len(gold_df) - complete_count
+            print(f"Complete records: {complete_count} ({complete_count/len(gold_df):.1%})")
+            print(f"Incomplete records: {incomplete_count} ({incomplete_count/len(gold_df):.1%})")
+            
+            # By year analysis
+            print("\n--- Completeness by Year ---")
+            for year in sorted(gold_df['ano'].unique()):
+                year_data = gold_df[gold_df['ano'] == year]
+                year_complete = year_data['is_complete'].mean()
+                print(f"{year}: {year_complete:.1%} complete")
+        
+        if 'missing_values_count' in gold_df.columns:
+            print("\n--- Missing Values Analysis ---")
+            missing_stats = gold_df['missing_values_count'].describe()
+            print(f"Average missing values per record: {missing_stats['mean']:.2f}")
+            print(f"Records with no missing values: {(gold_df['missing_values_count'] == 0).sum()}")
+            print(f"Records with 1-3 missing values: {((gold_df['missing_values_count'] >= 1) & (gold_df['missing_values_count'] <= 3)).sum()}")
+            print(f"Records with 4+ missing values: {(gold_df['missing_values_count'] >= 4).sum()}")
+        
+        print("\n✅ Gold data processing completed successfully!")
+        print("📊 Single file saved with completeness flags")
+        
     else:
-        logger.error("Silver layer processing failed")
+        print("❌ Gold layer processing failed")

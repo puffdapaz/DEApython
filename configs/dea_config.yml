@@ -1,5 +1,64 @@
 # dea_config.yml
 # DEA configuration parameters
+general:
+  years: [2017, 2019]
+
+bronze:
+  required_columns:
+    population: ["id_municipio", "sigla_uf", "ano", "populacao"]
+    pib: ["id_municipio", "ano", "pib"]
+    education_spending: ["id_municipio", "sigla_uf", "ano", "valor"]
+    enrollments: ["id_municipio", "sigla_uf", "ano", "quantidade_matricula"]
+    ideb: ["id_municipio", "sigla_uf", "ano", "anos_escolares", "ideb"]
+    dropout_rates: ["id_municipio", "ano", "taxa_abandono_ef_anos_iniciais", "taxa_abandono_ef_anos_finais"]
+
+silver:
+  validation_rules:
+    populacao:
+      min: 0
+      max: 15000000
+    pib:
+      min: 0
+    gastos_educacao:
+      min: 0
+    quantidade_matricula:
+      min: 0
+    ideb_iniciais:
+      min: 0
+      max: 10
+    ideb_finais:
+      min: 0
+      max: 10
+    taxa_abandono_ef_anos_iniciais:
+      min: 0
+      max: 100
+    taxa_abandono_ef_anos_finais:
+      min: 0
+      max: 100
+
+gold:
+  value_columns:
+    - populacao
+    - pib
+    - gastos_educacao
+    - quantidade_matricula
+    - ideb_iniciais
+    - ideb_finais
+    - taxa_abandono_ef_anos_iniciais
+    - taxa_abandono_ef_anos_finais
+    - pib_per_capita
+    - gasto_por_aluno
+  completeness_threshold: 0.0  # All values must be present for complete flag
+
+analysis:
+  input_columns:
+    - pib_per_capita
+    - gasto_por_aluno
+  output_columns:
+    - ideb_iniciais
+    - ideb_finais
+    - taxa_abandono_ef_anos_iniciais
+    - taxa_abandono_ef_anos_finais
 
 rts:
   crs: "constant"
