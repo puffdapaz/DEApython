@@ -1,60 +1,79 @@
 # etl/gold_dea.py
-"""
-Gold layer ETL script:
-- Loads processed (silver) data
-- Runs DEA analysis using DEAAnalyzer
-- Exports results and summaries
-"""
 
+import os
+import yaml
 import pandas as pd
 from dea_analyzer.core import DEAAnalyzer
 from dea_analyzer.diagnostics import run_diagnostics
 from save_utils.save import save_dataframe
 
-# Configs: you could replace with configs/dea_config.yml
-INPUT_PATH = "data/processed/gold/gold_data_complete_cases.csv"
-OUTPUT_DIR = "data/output"
+def load_configs():
+    """Load DEA and path configurations from YAML files."""
+    with open("configs/dea_config.yml", "r") as f:
+        dea_config = yaml.safe_load(f)
+    with open("configs/path.yml", "r") as f:
+        paths = yaml.safe_load(f)
+    return dea_config, paths
 
 def run_gold_stage():
-    # 1. Load silver/processed data
-    print("📂 Loading data from silver stage...")
-    complete_cases = pd.read_csv(INPUT_PATH)
+    # Load configuration
+    dea_config, paths = load_configs()
 
-    # 2. Initialize DEA analyzer
-    analyzer = DEAAnalyzer(
-        inputs=["pib_per_capita", "gasto_por_aluno"],
-        outputs=[
-            "ideb_iniciais", "ideb_finais",
-            "taxa_abandono_ef_anos_iniciais", "taxa_abandono_ef_anos_finais"
-        ]
-    )
+    # Prepare file paths from configuration
+    input_file = paths['files']['gold_input']
+    output_dir = paths['data']['output']
 
-    # 3. Run DEA for each year
-    print("⚙️ Running DEA analysis...")
+    # Load data
+    print("📂 Loading data...")
+    complete_cases = pd.read_csv(input_file)
+
+    # Descriptive statistics (optional)
+    print("Data Description:")
+    print(complete_cases.groupby('ano').describe().stack())
+    print(complete_cases.groupby('ano').corr(numeric_only=True))
+
+    # Extract variables from config
+    input_vars = dea_config.get('input_vars',
+                                ["pib_per_capita", "gasto_por_aluno"])
+    output_vars = dea_config.get('output_vars',
+                                 ["ideb_iniciais", "ideb_finais",
+                                  "taxa_abandono_ef_anos_iniciais",
+                                  "taxa_abandono_ef_anos_finais"])
+
+    # Initialize DEA analyzer
+    analyzer = DEAAnalyzer(inputs=input_vars, outputs=output_vars)
+
+    # Run DEA
+    print("⚙️ Running DEA analysis by year...")
     results, efficiency_analysis = analyzer.run_all(complete_cases)
 
-    # 4. Run diagnostics (normality, KS, scale efficiency)
+    # Run diagnostics
     print("🔍 Running diagnostics...")
     diagnostics = run_diagnostics(efficiency_analysis)
 
-    # 5. Export results
-    print("💾 Exporting results...")
+    # Export results
+    print("💾 Exporting DEA results and summaries...")
     for year, year_data in results.items():
-        if "result_df" not in year_data:
-            continue
-        df = year_data["result_df"]
+        result_df = year_data['result_df']
+        save_dataframe(result_df, f"DEA_Analysis_{year}", directory=output_dir, file_format="csv")
 
-        # Save full result
-        save_dataframe(df, f"DEA_Analysis_{year}", directory=OUTPUT_DIR, file_format="csv")
-
-        # Save summary
-        dea_cols = [c for c in df.columns if c.startswith("DEA_")]
+        dea_cols = [c for c in result_df.columns if c.startswith("DEA_")]
         if dea_cols:
-            summary = df[dea_cols].describe()
-            save_dataframe(summary, f"DEA_Summary_{year}", directory=OUTPUT_DIR, file_format="csv")
+            summary_df = result_df[dea_cols].describe()
+            save_dataframe(summary_df, f"DEA_Summary_{year}", directory=output_dir, file_format="csv")
 
-    # Optionally: save diagnostics report
-    save_dataframe(pd.DataFrame(diagnostics), "DEA_Diagnostics", directory=OUTPUT_DIR, file_format="csv")
+    # Export diagnostics
+    # Convert diagnostics (which maybe a nested dict) to DataFrame
+    diag_list = []
+    for year, diag in diagnostics.items():
+        row = {'year': year}
+        for test_name, result in diag.items():
+            # for Shapiro or KS, we can store statistic & pvalue
+            row[f"{test_name}_stat"] = getattr(result, 'statistic', None)
+            row[f"{test_name}_pvalue"] = getattr(result, 'pvalue', None)
+        diag_list.append(row)
+    diag_df = pd.DataFrame(diag_list)
+    save_dataframe(diag_df, "DEA_Diagnostics", directory=output_dir, file_format="csv")
 
     print("✅ Gold stage completed!")
 
