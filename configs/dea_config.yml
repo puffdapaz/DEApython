@@ -1,0 +1,21 @@
+# dea_config.yml
+# DEA configuration parameters
+
+rts:
+  crs: "constant"
+  vrs: "variable"
+  irs: "increasing"
+  drs: "decreasing"
+
+orientation:
+  input: "input"
+  output: "output"
+
+# Optional: which models to calculate
+models:
+  - crs_input
+  - crs_output
+  - vrs_input
+  - vrs_output
+  - irs_input
+  - drs_input
