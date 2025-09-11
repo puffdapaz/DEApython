@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 # Access Key for basedosdados
 load_dotenv()
 bd.config.billing_project_id = os.getenv("billing_project_id")
+bucket_name = os.getenv("gcp_bucket_name")
 
 silver_df = """
 WITH 
@@ -228,6 +229,6 @@ try:
     print(f"Unique cities in complete cases: {complete_cases['id_municipio'].nunique()}")
     print(f"Incomplete cases: {len(incomplete_cases)} rows")
     print(f"Unique cities in incomplete cases: {incomplete_cases['id_municipio'].nunique()}")
-    
+
 except Exception as e:
     print(f"Error in processing: {str(e)}")
