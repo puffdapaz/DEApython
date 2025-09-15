@@ -25,11 +25,6 @@ gold:
   output_filename:
     gold_data: "gold_data_complete"
 
-data:
-  raw: "data/raw"
-  processed: "data/processed"
-  output: "data/output"
-
 files:
   gold_input: "data/processed/gold/gold_data_complete_cases.csv"
   dea_results: "data/output/DEA_Analysis"

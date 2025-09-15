@@ -11,7 +11,6 @@ Runs the complete ETL pipeline:
 from etl.bronze_ingestion import bronze_ingestion
 from etl import silver_processing
 from etl import gold_etl
-from etl.save_utils import save_dataframe, save_dataframe_to_gcs
 
 def main():
     """Main pipeline execution function"""
@@ -30,9 +29,9 @@ def main():
         print("✨ Processing gold data...")
         gold_df = gold_etl.process_gold_data()
 
-        # Step 4: Save Results
-        print("💾 Saving results...")
-        save_dataframe(gold_df, "dea_final_results", directory="data/output")
+        # # Step 4: Save Results
+        # print("💾 Saving results...")
+        # save_dataframe(gold_df, "dea_final_results", directory="data")
         
         print("✅ Pipeline completed successfully!")
         

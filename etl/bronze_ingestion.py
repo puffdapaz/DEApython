@@ -5,7 +5,7 @@ import logging
 from typing import Dict, List, Optional
 from pathlib import Path
 from dotenv import load_dotenv
-from .save_utils import save_dataframe, save_dataframe_to_gcs
+from .save_utils.save import save_dataframe, save_dataframe_to_gcs
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -110,21 +110,6 @@ def validate_bronze_data(dataframes: Dict[str, bd.Table]) -> bool:
     logger.info("All bronze data validated successfully")
     return True
 
-def save_bronze_data(dataframes: Dict[str, bd.Table], bucket_name: str):
-    """Save all bronze dataframes to local and GCS."""
-    for filename, df in dataframes.items():
-        if df is not None:
-            try:
-                # Save locally
-                save_dataframe(df, f"bronze_{filename}")
-                
-                # Save to GCS
-                save_dataframe_to_gcs(df, f"bronze_{filename}", bucket_name, layer="bronze")
-                
-                logger.info(f"Successfully saved {filename}")
-            except Exception as e:
-                logger.error(f"Error saving {filename}: {e}")
-
 def bronze_ingestion():
     """Main function for bronze layer data ingestion."""
     logger.info("Starting bronze data ingestion")
@@ -151,7 +136,21 @@ def bronze_ingestion():
             raise ValueError("Bronze data validation failed")
         
         # Save data
-        save_bronze_data(dataframes, bucket_name)
+        local_path = Path("data/raw")
+        local_path.mkdir(parents=True, exist_ok=True)
+
+        for filename, df in dataframes.items():
+                if df is not None:
+                    try:
+                        # Save locally
+                        save_dataframe(df, f"bronze_{filename}", directory=local_path)
+                        
+                        # Save to GCS
+                        save_dataframe_to_gcs(df, f"bronze_{filename}", bucket_name, layer="bronze")
+                        
+                        logger.info(f"Successfully saved {filename}")
+                    except Exception as e:
+                        logger.error(f"Error saving {filename}: {e}")
         
         logger.info("Bronze data ingestion completed successfully")
         return dataframes

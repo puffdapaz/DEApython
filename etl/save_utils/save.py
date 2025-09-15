@@ -6,7 +6,7 @@ import tempfile
 from google.cloud import storage
 from dotenv import load_dotenv
 
-def save_dataframe(df: pd.DataFrame, filename: str, directory: str = "data/output", file_format: str = "csv"):
+def save_dataframe(df: pd.DataFrame, filename: str, directory: str = "data/raw", file_format: str = "csv"):
     """
     Save a DataFrame to the specified directory with given format.
     Automatically creates directory if it doesn't exist.
