@@ -1,8 +1,7 @@
-# etl/__init__.py
-# ETL package
-# Import main functions if needed
-from .gold_dea import run_gold_etl
-from .silver_processing import run_silver_etl
-from .bronze_ingestion import run_bronze_etl
+# src/dea_education/__init__.py
+from bronze_ingestion import bronze_ingestion
+from silver_processing import process_silver_data
+from gold_etl import process_gold_data
+from .save_utils import save_dataframe, save_dataframe_to_gcs
 
-__all__ = ["run_gold_etl"]
+__version__ = "0.1.0"

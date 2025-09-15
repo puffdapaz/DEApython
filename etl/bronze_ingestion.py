@@ -5,7 +5,7 @@ import logging
 from typing import Dict, List, Optional
 from pathlib import Path
 from dotenv import load_dotenv
-from save import save_dataframe, save_dataframe_to_gcs
+from .save_utils import save_dataframe, save_dataframe_to_gcs
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -40,7 +40,7 @@ def setup_basedosdados() -> str:
     
     return bucket_name
 
-def get_bronze_query(query: str, query_name: str) -> Optional[bd.Table]:
+def load_bronze_data(query: str, query_name: str) -> Optional[bd.Table]:
     """Load data from Base dos Dados with error handling."""
     try:
         logger.info(f"Executing query: {query_name}")
@@ -143,7 +143,7 @@ def bronze_ingestion():
         # Load all data
         dataframes = {}
         for query_name, query in queries.items():
-            df = get_bronze_query(query, query_name)
+            df = load_bronze_data(query, query_name)
             dataframes[query_name] = df
         
         # Validate data
