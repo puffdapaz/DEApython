@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 def load_configs() -> tuple:
-    """Load DEA and path configurations from YAML files."""
+    """Load configurations from YAML files."""
     try:
         with open("configs/dea_config.yml", "r") as f:
             dea_config = yaml.safe_load(f)
@@ -40,7 +40,7 @@ def setup_basedosdados() -> str:
     
     return bucket_name
 
-def load_bronze_data(query: str, query_name: str) -> Optional[bd.Table]:
+def get_bronze_query(query: str, query_name: str) -> Optional[bd.Table]:
     """Load data from Base dos Dados with error handling."""
     try:
         logger.info(f"Executing query: {query_name}")
@@ -143,7 +143,7 @@ def bronze_ingestion():
         # Load all data
         dataframes = {}
         for query_name, query in queries.items():
-            df = load_bronze_data(query, query_name)
+            df = get_bronze_query(query, query_name)
             dataframes[query_name] = df
         
         # Validate data

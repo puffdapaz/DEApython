@@ -28,7 +28,7 @@ def load_configs() -> tuple:
         raise
 
 def setup_basedosdados() -> str:
-    """Set up Base dos Dados configuration."""
+    """Set up Base dos Dados configuration and return bucket name."""
     load_dotenv()
     billing_project_id = os.getenv("billing_project_id")
     bucket_name = os.getenv("gcp_bucket_name")
