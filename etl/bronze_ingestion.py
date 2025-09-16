@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 from pathlib import Path
 from dotenv import load_dotenv
 from .save_utils.save import save_dataframe, save_dataframe_to_gcs
+from .diagnostics.data_validation import validate_bronze_data
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -94,21 +95,6 @@ def get_bronze_queries() -> Dict[str, str]:
             AND localizacao = "total"
         """
     }
-
-def validate_bronze_data(dataframes: Dict[str, bd.Table]) -> bool:
-    """Validate that all required bronze data was loaded successfully."""
-    required_tables = ["population", "pib", "education_spending", "enrollments", "ideb", "dropout_rates"]
-    
-    for table_name in required_tables:
-        if table_name not in dataframes or dataframes[table_name] is None:
-            logger.error(f"Missing required table: {table_name}")
-            return False
-        if dataframes[table_name].empty:
-            logger.error(f"Empty table: {table_name}")
-            return False
-    
-    logger.info("All bronze data validated successfully")
-    return True
 
 def bronze_ingestion():
     """Main function for bronze layer data ingestion."""

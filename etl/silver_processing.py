@@ -7,6 +7,7 @@ import pandas as pd
 from pathlib import Path
 from dotenv import load_dotenv
 from .save_utils import save_dataframe, save_dataframe_to_gcs
+from .diagnostics.data_validation import validate_silver_data
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -206,45 +207,6 @@ LEFT JOIN matriculas m ON p.id_municipio = m.id_municipio AND p.ano = m.ano
 LEFT JOIN ideb i ON p.id_municipio = i.id_municipio AND p.ano = i.ano
 LEFT JOIN abandono a ON p.id_municipio = a.id_municipio AND p.ano = a.ano
 """
-
-def validate_silver_data(df) -> bool:
-    """Validate silver data quality."""
-    if df is None or df.empty:
-        logger.error("Silver data is empty or None")
-        return False
-    
-    required_columns = [
-        'id_municipio', 'sigla_uf', 'ano', 'nome', 'populacao',
-        'pib', 'gastos_educacao', 'quantidade_matricula', 'ideb_iniciais',
-        'ideb_finais', 'taxa_abandono_ef_anos_iniciais', 'taxa_abandono_ef_anos_finais',
-        'pib_per_capita', 'gasto_por_aluno'
-    ]
-    
-    missing_columns = set(required_columns) - set(df.columns)
-    if missing_columns:
-        logger.error(f"Missing required columns: {missing_columns}")
-        return False
-    
-    # Check for reasonable data ranges
-    validation_checks = {
-        'populacao': (lambda x: x > 0, "Population should be positive"),
-        'pib': (lambda x: x > 0, "GDP should be positive"),
-        'gastos_educacao': (lambda x: x > 0, "Education spending should be positive"),
-        'quantidade_matricula': (lambda x: x > 0, "Enrollments should be positive"),
-        'ideb_iniciais': (lambda x: 0 <= x <= 10, "IDEB should be between 0-10"),
-        'ideb_finais': (lambda x: 0 <= x <= 10, "IDEB should be between 0-10"),
-        'taxa_abandono_ef_anos_iniciais': (lambda x: 0 <= x <= 100, "Dropout rate should be 0-100%"),
-        'taxa_abandono_ef_anos_finais': (lambda x: 0 <= x <= 100, "Dropout rate should be 0-100%")
-    }
-    
-    for col, (check_func, message) in validation_checks.items():
-        if col in df.columns:
-            invalid_count = df[df[col].notna() & ~df[col].apply(check_func)].shape[0]
-            if invalid_count > 0:
-                logger.warning(f"{invalid_count} records with invalid {col}: {message}")
-    
-    logger.info(f"Silver data validation passed. Shape: {df.shape}")
-    return True
 
 def add_completeness_flags(df: pd.DataFrame, value_columns: List[str]) -> pd.DataFrame:
     """Add municipality-level completeness flag across years."""

@@ -8,6 +8,7 @@ from dealib import RTS, Orientation, dea
 from pathlib import Path
 from dotenv import load_dotenv
 from .save_utils import save_dataframe, save_dataframe_to_gcs
+from .diagnostics.data_validation import validate_gold_data
 
 # Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -105,42 +106,6 @@ def perform_dea_analysis() -> pd.DataFrame:
         how="left"
     )
     return gold_df
-
-def validate_gold_data(gold_df) -> bool:
-    """Validate silver data quality."""
-    if gold_df is None or gold_df.empty:
-        logger.error("Silver data is empty or None")
-        return False
-    
-    required_columns = [
-        'DEA_crs_input', 'DEA_crs_output', 'DEA_vrs_input', 'DEA_vrs_output',
-        'DEA_irs_input', 'DEA_drs_input', 'DEA_scale_efficiency', 'DEA_returns_nature'
-    ]
-    
-    missing_columns = set(required_columns) - set(gold_df.columns)
-    if missing_columns:
-        logger.error(f"Missing required columns: {missing_columns}")
-        return False
-    
-    # Check for reasonable data ranges
-    validation_checks = {
-        'DEA_crs_input': (lambda x: 0 <= x <= 1, "DEA interval should be 0-1"),
-        'DEA_crs_output': (lambda x: 0 <= x <= 1, "DEA interval should be 0-1"),
-        'DEA_vrs_input': (lambda x: 0 <= x <= 1, "DEA interval should be 0-1"),
-        'DEA_vrs_output': (lambda x: 0 <= x <= 1, "DEA interval should be 0-1"),
-        'DEA_irs_input': (lambda x: 0 <= x <= 1, "DEA interval should be 0-1"),
-        'DEA_drs_input': (lambda x: 0 <= x <= 1, "DEA interval should be 0-1"),
-        'DEA_scale_efficiency': (lambda x: 0 <= x <= 1, "DEA interval should be 0-1")
-    }
-    
-    for col, (check_func, message) in validation_checks.items():
-        if col in gold_df.columns:
-            invalid_count = gold_df[gold_df[col].notna() & ~gold_df[col].apply(check_func)].shape[0]
-            if invalid_count > 0:
-                logger.warning(f"{invalid_count} records with invalid {col}: {message}")
-    
-    logger.info(f"Silver data validation passed. Shape: {gold_df.shape}")
-    return True
 
 def process_gold_data() -> pd.DataFrame:
     logger.info("Starting Gold data modeling process...")
