@@ -10,14 +10,17 @@ def create_folders(folders):
 
 if __name__ == "__main__":
     folders = [
+        "etl",
+        "etl/diagnostics",
+        "etl/save_utils",
         "data/raw",
         "data/processed",
         "data/processed/silver",
         "data/processed/gold",
         "data/output",
         "docs",
-        "scripts",
         "credentials",
+        "configs",
         "tests"
     ]
     create_folders(folders)

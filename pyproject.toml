@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "DEApython"
+version = "0.1.0"
+description = "Data Envelopment Analysis for educational performance evaluation"
+authors = [
+  { name = "Pedro Silva", email = "silvapedro@outlook.com" }
+]
+requires-python = ">=3.8"
+
+[dependencies]
+python = ">=3.8"
+pandas = "^1.5"
+numpy = "^1.24"
+scipy = "^1.7"
+dealib = "^1.0"
+basedosdados = "^2.0"
+pyyaml = "^6.0"
+python-dotenv = "^1.0"
+
+[scripts]
+deapipeline = "main:main"
