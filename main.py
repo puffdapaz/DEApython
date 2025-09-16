@@ -25,13 +25,10 @@ def main():
         print("⚙️ Processing silver data...")
         silver_df = silver_processing.process_silver_data()
         
-        # Step 3: Gold ETL
+        # Step 3: Gold DEA Model
         print("✨ Processing gold data...")
         gold_df = gold_etl.process_gold_data()
 
-        # # Step 4: Save Results
-        # print("💾 Saving results...")
-        # save_dataframe(gold_df, "dea_final_results", directory="data")
         
         print("✅ Pipeline completed successfully!")
         

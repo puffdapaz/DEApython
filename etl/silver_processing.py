@@ -2,7 +2,8 @@ import basedosdados as bd
 import os
 import yaml
 import logging
-from typing import Dict, Optional
+from typing import Dict, List, Optional
+import pandas as pd
 from pathlib import Path
 from dotenv import load_dotenv
 from .save_utils import save_dataframe, save_dataframe_to_gcs
@@ -44,49 +45,52 @@ def get_silver_query() -> str:
     """Return the silver layer SQL query."""
     return """
 WITH 
--- Population data with validation
+-- Population data
 populacao AS (
   SELECT
     id_municipio,
     sigla_uf,
     ano,
     CASE
-      WHEN SAFE_CAST(populacao AS INT64) <= 0 THEN NULL
+      WHEN SAFE_CAST(populacao AS INT64) = 0 THEN NULL
+      WHEN SAFE_CAST(populacao AS INT64) < 0 THEN NULL
       ELSE SAFE_CAST(populacao AS INT64)
     END AS populacao
   FROM `basedosdados.br_ibge_populacao.municipio`
   WHERE ano IN (2017, 2019)
 ),
 
--- Municipality names
-municipio_names AS (
+-- names data
+name AS (
   SELECT 
     id_municipio,
     nome
   FROM `basedosdados.br_bd_diretorios_brasil.municipio`
 ),
 
--- GDP data with validation
+-- GDP data
 pib AS (
   SELECT 
     id_municipio,
     ano,
     CASE
-      WHEN SAFE_CAST(pib AS INT64) <= 0 THEN NULL
+      WHEN SAFE_CAST(pib AS INT64) = 0 THEN NULL
+      WHEN SAFE_CAST(pib AS INT64) < 0 THEN NULL
       ELSE SAFE_CAST(pib AS INT64)
     END AS pib
   FROM `basedosdados.br_ibge_pib.municipio`
   WHERE ano IN (2017, 2019)
 ),
 
--- Education expenses with validation
+-- Education expenses
 gastos_educ AS (
   SELECT 
     id_municipio,
     sigla_uf,
     ano,
     CASE
-      WHEN SAFE_CAST(valor AS INT64) <= 0 THEN NULL
+      WHEN SAFE_CAST(valor AS INT64) = 0 THEN NULL
+      WHEN SAFE_CAST(valor AS INT64) < 0 THEN NULL
       ELSE SAFE_CAST(valor AS INT64)
     END AS valor
   FROM `basedosdados.br_me_siconfi.municipio_despesas_funcao`
@@ -95,7 +99,7 @@ gastos_educ AS (
     AND conta = "Educação"
 ),
 
--- Enrollments with validation
+-- Enrollments
 matriculas AS (
   WITH validated_data AS (
     SELECT
@@ -104,7 +108,7 @@ matriculas AS (
       ano,
       CASE
         WHEN SAFE_CAST(quantidade_matricula AS INT64) IS NULL THEN NULL
-        WHEN SAFE_CAST(quantidade_matricula AS INT64) <= 0 THEN NULL
+        WHEN SAFE_CAST(quantidade_matricula AS INT64) < 0 THEN NULL
         ELSE SAFE_CAST(quantidade_matricula AS INT64)
       END AS validated_matricula
     FROM `basedosdados.br_inep_sinopse_estatistica_educacao_basica.etapa_ensino_serie`
@@ -121,7 +125,7 @@ matriculas AS (
   GROUP BY id_municipio, sigla_uf, ano
 ),
 
--- IDEB scores with validation
+-- IDEB scores
 ideb AS (
   WITH validated_data AS (
     SELECT
@@ -150,7 +154,7 @@ ideb AS (
   GROUP BY id_municipio, sigla_uf, ano
 ),
 
--- Abandonment rates with validation
+-- Abandonment rates
 abandono AS (
   SELECT 
     id_municipio, 
@@ -158,13 +162,11 @@ abandono AS (
     CASE
       WHEN SAFE_CAST(taxa_abandono_ef_anos_iniciais AS FLOAT64) IS NULL THEN NULL
       WHEN SAFE_CAST(taxa_abandono_ef_anos_iniciais AS FLOAT64) < 0 THEN NULL
-      WHEN SAFE_CAST(taxa_abandono_ef_anos_iniciais AS FLOAT64) > 100 THEN NULL
       ELSE SAFE_CAST(taxa_abandono_ef_anos_iniciais AS FLOAT64)
     END AS taxa_abandono_ef_anos_iniciais,
     CASE
       WHEN SAFE_CAST(taxa_abandono_ef_anos_finais AS FLOAT64) IS NULL THEN NULL
       WHEN SAFE_CAST(taxa_abandono_ef_anos_finais AS FLOAT64) < 0 THEN NULL
-      WHEN SAFE_CAST(taxa_abandono_ef_anos_finais AS FLOAT64) > 100 THEN NULL
       ELSE SAFE_CAST(taxa_abandono_ef_anos_finais AS FLOAT64)
     END AS taxa_abandono_ef_anos_finais
   FROM `basedosdados.br_inep_indicadores_educacionais.municipio`
@@ -173,13 +175,13 @@ abandono AS (
     AND localizacao = "total"
 )
 
--- Final combined query with derived metrics
+-- Final combined query
 SELECT 
   p.id_municipio,
   p.sigla_uf,
   p.ano,
-  n.nome AS municipio_nome,
   p.populacao,
+  n.nome,
   pb.pib,
   ge.valor AS gastos_educacao,
   m.quantidade_matricula,
@@ -187,33 +189,18 @@ SELECT
   i.ideb_finais,
   a.taxa_abandono_ef_anos_iniciais,
   a.taxa_abandono_ef_anos_finais,
-  
-  -- Derived metrics with comprehensive validation
-  CASE 
-    WHEN p.populacao IS NOT NULL AND p.populacao > 0 
-         AND pb.pib IS NOT NULL AND pb.pib > 0
+  -- Calculate derived metrics
+  CASE WHEN p.populacao IS NOT NULL AND p.populacao > 0 
      THEN ROUND(SAFE_CAST(pb.pib AS FLOAT64) / SAFE_CAST(p.populacao AS FLOAT64), 2)
      ELSE NULL 
-  END AS pib_per_capita,
-  
-  CASE 
-    WHEN m.quantidade_matricula IS NOT NULL AND m.quantidade_matricula > 0 
-         AND ge.valor IS NOT NULL AND ge.valor > 0
+END AS pib_per_capita,
+  CASE WHEN m.quantidade_matricula IS NOT NULL AND m.quantidade_matricula > 0 
      THEN ROUND(SAFE_CAST(ge.valor AS FLOAT64) / SAFE_CAST(m.quantidade_matricula AS FLOAT64), 2)
      ELSE NULL 
-  END AS gasto_por_aluno,
-  
-  -- Data quality flags
-  CASE WHEN p.populacao IS NULL THEN 1 ELSE 0 END AS flag_populacao_missing,
-  CASE WHEN pb.pib IS NULL THEN 1 ELSE 0 END AS flag_pib_missing,
-  CASE WHEN ge.valor IS NULL THEN 1 ELSE 0 END AS flag_gastos_missing,
-  CASE WHEN m.quantidade_matricula IS NULL THEN 1 ELSE 0 END AS flag_matriculas_missing,
-  CASE WHEN i.ideb_iniciais IS NULL OR i.ideb_finais IS NULL THEN 1 ELSE 0 END AS flag_ideb_missing,
-  CASE WHEN a.taxa_abandono_ef_anos_iniciais IS NULL OR a.taxa_abandono_ef_anos_finais IS NULL THEN 1 ELSE 0 END AS flag_abandono_missing
-
+END AS gasto_por_aluno
 FROM populacao p
 LEFT JOIN pib pb ON p.id_municipio = pb.id_municipio AND p.ano = pb.ano
-LEFT JOIN municipio_names n ON p.id_municipio = n.id_municipio
+LEFT JOIN name n ON p.id_municipio = n.id_municipio
 LEFT JOIN gastos_educ ge ON p.id_municipio = ge.id_municipio AND p.ano = ge.ano
 LEFT JOIN matriculas m ON p.id_municipio = m.id_municipio AND p.ano = m.ano
 LEFT JOIN ideb i ON p.id_municipio = i.id_municipio AND p.ano = i.ano
@@ -227,7 +214,7 @@ def validate_silver_data(df) -> bool:
         return False
     
     required_columns = [
-        'id_municipio', 'sigla_uf', 'ano', 'municipio_nome', 'populacao',
+        'id_municipio', 'sigla_uf', 'ano', 'nome', 'populacao',
         'pib', 'gastos_educacao', 'quantidade_matricula', 'ideb_iniciais',
         'ideb_finais', 'taxa_abandono_ef_anos_iniciais', 'taxa_abandono_ef_anos_finais',
         'pib_per_capita', 'gasto_por_aluno'
@@ -259,6 +246,23 @@ def validate_silver_data(df) -> bool:
     logger.info(f"Silver data validation passed. Shape: {df.shape}")
     return True
 
+def add_completeness_flags(df: pd.DataFrame, value_columns: List[str]) -> pd.DataFrame:
+    """Add municipality-level completeness flag across years."""
+
+    df = df.copy()
+
+    # Temporary row-level flag
+    tmp_flag = df[value_columns].notnull().all(axis=1)
+
+    # Grouped completeness: all years must be complete
+    df['is_complete_grouped'] = (
+        df.assign(_tmp=tmp_flag)
+          .groupby('id_municipio')['_tmp']
+          .transform(lambda x: x.all())
+    )
+
+    return df
+
 def process_silver_data() -> Optional[bd.Table]:
     """Process silver layer data."""
     try:
@@ -278,6 +282,15 @@ def process_silver_data() -> Optional[bd.Table]:
         # Validate data
         if not validate_silver_data(silver_df):
             raise ValueError("Silver data validation failed")
+        
+        value_columns = [
+        'populacao', 'pib', 'gastos_educacao', 'quantidade_matricula',
+        'ideb_iniciais', 'ideb_finais',
+        'taxa_abandono_ef_anos_iniciais', 'taxa_abandono_ef_anos_finais',
+        'pib_per_capita', 'gasto_por_aluno'
+    ]
+
+        silver_df = add_completeness_flags(silver_df, value_columns)
         
         # Save data
         local_path = Path("data/processed/silver")
@@ -301,15 +314,7 @@ def analyze_silver_data(df):
     logger.info("Silver Data Analysis:")
     logger.info(f"Total records: {len(df)}")
     logger.info(f"Years: {df['ano'].unique()}")
-    logger.info(f"States: {df['sigla_uf'].nunique()}")
     logger.info(f"Municipalities: {df['id_municipio'].nunique()}")
-    
-    # Missing data analysis
-    flag_columns = [col for col in df.columns if col.startswith('flag_')]
-    for flag_col in flag_columns:
-        missing_count = df[flag_col].sum()
-        missing_pct = (missing_count / len(df)) * 100
-        logger.info(f"{flag_col}: {missing_count} records ({missing_pct:.1f}%)")
 
 if __name__ == "__main__":
     silver_df = process_silver_data()
