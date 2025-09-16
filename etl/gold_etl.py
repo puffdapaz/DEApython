@@ -45,11 +45,11 @@ def perform_dea_analysis() -> pd.DataFrame:
     """Run DEA on complete Silver dataset and return one Gold DataFrame."""
 
     # 1. Load Silver data
-    df = pd.read_csv("data/processed/silver/silver_data.csv")
-
-    # 2. Filter complete cases
-    df = df[df["is_complete_grouped"] == True]
-    if df.empty:
+    df_full = pd.read_csv("data/processed/silver/silver_data.csv")
+    
+    # Only use complete cases for DEA calculations
+    df_complete = df_full[df_full["is_complete_grouped"] == True]
+    if df_complete.empty:
         raise ValueError("No complete cases found in Silver dataset")
 
     results = []
@@ -63,7 +63,7 @@ def perform_dea_analysis() -> pd.DataFrame:
         Y = np.hstack([y_ideb, abandono_iniciais, abandono_finais])
         return X, Y
 
-    for year, subset in df.groupby("ano"):
+    for year, subset in df_complete.groupby("ano"):
         logger.info(f"Running DEA for year {year}")
         X, Y = prepare_matrices(subset)
 
@@ -98,7 +98,12 @@ def perform_dea_analysis() -> pd.DataFrame:
         results.append(result_df)
 
     # 4. Merge into one Gold file
-    gold_df = pd.concat(results, ignore_index=True)
+    dea_df = pd.concat(results, ignore_index=True)
+    gold_df = df_full.merge(
+        dea_df[["id_municipio", "ano"] + [c for c in dea_df.columns if c.startswith("DEA_")]],
+        on=["id_municipio", "ano"],
+        how="left"
+    )
     return gold_df
 
 def validate_gold_data(gold_df) -> bool:
