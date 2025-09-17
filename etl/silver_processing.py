@@ -241,10 +241,6 @@ def process_silver_data() -> Optional[bd.Table]:
         logger.info("Executing silver query...")
         silver_df = bd.read_sql(query)
         
-        # Validate data
-        if not validate_silver_data(silver_df):
-            raise ValueError("Silver data validation failed")
-        
         value_columns = [
         'populacao', 'pib', 'gastos_educacao', 'quantidade_matricula',
         'ideb_iniciais', 'ideb_finais',
@@ -253,7 +249,11 @@ def process_silver_data() -> Optional[bd.Table]:
     ]
 
         silver_df = add_completeness_flags(silver_df, value_columns)
-        
+
+        # Validate data
+        if not validate_silver_data(silver_df):
+            raise ValueError("Silver data validation failed")
+
         # Save data
         local_path = Path("data/processed/silver")
         local_path.mkdir(parents=True, exist_ok=True)

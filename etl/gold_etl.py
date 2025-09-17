@@ -105,6 +105,10 @@ def perform_dea_analysis() -> pd.DataFrame:
         on=["id_municipio", "ano"],
         how="left"
     )
+
+    # Explicitly cast columns to expected types
+    gold_df["id_municipio"] = gold_df["id_municipio"].astype("str")
+
     return gold_df
 
 def process_gold_data() -> pd.DataFrame:

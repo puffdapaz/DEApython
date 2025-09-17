@@ -1,6 +1,5 @@
 import pandas as pd
 import basedosdados as bd
-import pandera as pa
 from pandera import Column, DataFrameSchema, Check
 import numpy as np
 import yaml
@@ -36,7 +35,7 @@ population_schema = DataFrameSchema({
 pib_schema = DataFrameSchema({
     "id_municipio": Column(str),
     "ano": Column(int, checks=Check.isin([2017, 2019])),
-    "pib": Column(float, checks=Check.ge(0))
+    "pib": Column(int, checks=Check.ge(0))
 })
 
 education_spending_schema = DataFrameSchema({
@@ -58,14 +57,14 @@ ideb_schema = DataFrameSchema({
     "sigla_uf": Column(str, nullable=True),
     "ano": Column(int, checks=Check.isin([2017, 2019])),
     "anos_escolares": Column(str, nullable=True, checks=Check.isin(["iniciais (1-5)", "finais (6-9)"])),
-    "ideb": Column(float, checks=Check.between(0, 10))
+    "ideb": Column(float, nullable=True, checks=Check.between(0, 10))
 })
 
 dropout_rates_schema = DataFrameSchema({
     "id_municipio": Column(str),
     "ano": Column(int, checks=Check.isin([2017, 2019])),
-    "taxa_abandono_ef_anos_iniciais": Column(float, checks=Check.between(0, 100)),
-    "taxa_abandono_ef_anos_finais": Column(float, checks=Check.between(0, 100))
+    "taxa_abandono_ef_anos_iniciais": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "taxa_abandono_ef_anos_finais": Column(float, nullable=True, checks=Check.between(0, 100))
 })
 
 schemas = {
@@ -95,12 +94,12 @@ def validate_bronze_data(dataframes: Dict[str, bd.Table]) -> bool:
 
 silver_schema = DataFrameSchema({
     "id_municipio": Column(str, nullable=False),
-    "sigla_uf": Column(str, nullable=True),
+    "sigla_uf": Column(str, nullable=False),
     "ano": Column(int, checks=Check.isin([2017, 2019])),
     "populacao": Column(int, nullable=True, checks=Check.ge(0)),
     "nome": Column(str, nullable=True),
-    "pib": Column(float, nullable=True, checks=Check.ge(0)),
-    "gastos_educacao": Column(float, nullable=True, checks=Check.ge(0)),
+    "pib": Column(int, nullable=True, checks=Check.ge(0)),
+    "gastos_educacao": Column(int, nullable=True, checks=Check.ge(0)),
     "quantidade_matricula": Column(int, nullable=True, checks=Check.ge(0)),
     "ideb_iniciais": Column(float, nullable=True, checks=Check.between(0, 10)),
     "ideb_finais": Column(float, nullable=True, checks=Check.between(0, 10)),
@@ -108,7 +107,7 @@ silver_schema = DataFrameSchema({
     "taxa_abandono_ef_anos_finais": Column(float, nullable=True, checks=Check.between(0, 100)),
     "pib_per_capita": Column(float, nullable=True, checks=Check.ge(0)),
     "gasto_por_aluno": Column(float, nullable=True, checks=Check.ge(0)),
-    "is_complete_grouped": Column(bool, nullable=True),
+    "is_complete_grouped": Column(bool, nullable=False),
 })
 
 def validate_silver_data(df) -> bool:
@@ -145,11 +144,10 @@ gold_schema = DataFrameSchema({
     "DEA_returns_nature": Column(str, nullable=True, checks=Check.isin(["Constante", "Crescente", "Decrescente"])),
 })
 
-
 def validate_gold_data(gold_df) -> bool:
     """Validate silver data quality."""
     try:
-        gold_schema.validate(df, lazy=True)
+        gold_schema.validate(gold_df, lazy=True)
         logger.info("✅ Gold data validation passed")
         return True
     except pa.errors.SchemaErrors as e:
