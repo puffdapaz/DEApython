@@ -1,32 +1,19 @@
 # path.yml
 # Paths for data ingestion and outputs
-data_directories:
+paths:
   root: "data"
+  bronze: "data/raw"
+  silver: "data/processed/silver"
+  gold: "data/processed/gold"
+  output: "data/output"
 
 bronze:
-  local_path: "data/raw/bronze"
   gcs_path: "gs://your-bucket/bronze"
-  tables:
-    - population
-    - pib
-    - education_spending
-    - enrollments
-    - ideb
-    - dropout_rates
 
 silver:
-  local_path: "data/processed/silver"
   gcs_path: "gs://your-bucket/silver"
   output_filename: "silver_data"
 
 gold:
-  local_path: "data/processed/gold"
   gcs_path: "gs://your-bucket/gold"
-  output_filename:
-    gold_data: "gold_data_complete"
-
-files:
-  gold_input: "data/processed/gold/gold_data_complete_cases.csv"
-  dea_results: "data/output/DEA_Analysis"
-  dea_summary: "data/output/DEA_Summary"
-
+  output_filename: "gold_data"

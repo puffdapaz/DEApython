@@ -20,6 +20,7 @@ dealib = "^1.0"
 basedosdados = "^2.0"
 pyyaml = "^6.0"
 python-dotenv = "^1.0"
+pandera = {extras = ["pandas"], version = "^0.20.0" }
 
 [scripts]
 deapipeline = "main:main"

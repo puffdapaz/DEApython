@@ -1,5 +1,7 @@
 import pandas as pd
 import basedosdados as bd
+import pandera as pa
+from pandera import Column, DataFrameSchema, Check
 import numpy as np
 import yaml
 from typing import Dict, List, Any
@@ -23,92 +25,133 @@ def load_configs() -> tuple:
         logger.error(f"Error parsing YAML config: {e}")
         raise
 
+# Define schemas for bronze datasets
+population_schema = DataFrameSchema({
+    "id_municipio": Column(str),
+    "sigla_uf": Column(str, nullable=True),
+    "ano": Column(int, checks=Check.isin([2017, 2019])),
+    "populacao": Column(int, checks=Check.ge(0))
+})
+
+pib_schema = DataFrameSchema({
+    "id_municipio": Column(str),
+    "ano": Column(int, checks=Check.isin([2017, 2019])),
+    "pib": Column(float, checks=Check.ge(0))
+})
+
+education_spending_schema = DataFrameSchema({
+    "id_municipio": Column(str),
+    "sigla_uf": Column(str, nullable=True),
+    "ano": Column(int, checks=Check.isin([2017, 2019])),
+    "valor": Column(float, checks=Check.ge(0))
+})
+
+enrollments_schema = DataFrameSchema({
+    "id_municipio": Column(str),
+    "sigla_uf": Column(str, nullable=True),
+    "ano": Column(int, checks=Check.isin([2017, 2019])),
+    "quantidade_matricula": Column(int, checks=Check.ge(0))
+})
+
+ideb_schema = DataFrameSchema({
+    "id_municipio": Column(str),
+    "sigla_uf": Column(str, nullable=True),
+    "ano": Column(int, checks=Check.isin([2017, 2019])),
+    "anos_escolares": Column(str, nullable=True, checks=Check.isin(["iniciais (1-5)", "finais (6-9)"])),
+    "ideb": Column(float, checks=Check.between(0, 10))
+})
+
+dropout_rates_schema = DataFrameSchema({
+    "id_municipio": Column(str),
+    "ano": Column(int, checks=Check.isin([2017, 2019])),
+    "taxa_abandono_ef_anos_iniciais": Column(float, checks=Check.between(0, 100)),
+    "taxa_abandono_ef_anos_finais": Column(float, checks=Check.between(0, 100))
+})
+
+schemas = {
+    "population": population_schema,
+    "pib": pib_schema,
+    "education_spending": education_spending_schema,
+    "enrollments": enrollments_schema,
+    "ideb": ideb_schema,
+    "dropout_rates": dropout_rates_schema,
+}
+
 def validate_bronze_data(dataframes: Dict[str, bd.Table]) -> bool:
     """Validate that all required bronze data was loaded successfully."""
-    required_tables = ["population", "pib", "education_spending", "enrollments", "ideb", "dropout_rates"]
-    
-    for table_name in required_tables:
-        if table_name not in dataframes or dataframes[table_name] is None:
-            logger.error(f"Missing required table: {table_name}")
-            return False
-        if dataframes[table_name].empty:
-            logger.error(f"Empty table: {table_name}")
-            return False
-    
-    logger.info("All bronze data validated successfully")
-    return True
+    all_valid = True
+    for name, df in dataframes.items():
+        if df is not None:
+            try:
+                if name in schemas:
+                    schemas[name].validate(df, lazy=True)
+                    logger.info(f"✅ {name} validation passed")
+                else:
+                    logger.warning(f"No schema defined for {name}, skipping validation")
+            except pa.errors.SchemaErrors as e:
+                logger.error(f"❌ {name} validation failed:\n{e.failure_cases}")
+                all_valid = False
+    return all_valid
+
+silver_schema = DataFrameSchema({
+    "id_municipio": Column(str, nullable=False),
+    "sigla_uf": Column(str, nullable=True),
+    "ano": Column(int, checks=Check.isin([2017, 2019])),
+    "populacao": Column(int, nullable=True, checks=Check.ge(0)),
+    "nome": Column(str, nullable=True),
+    "pib": Column(float, nullable=True, checks=Check.ge(0)),
+    "gastos_educacao": Column(float, nullable=True, checks=Check.ge(0)),
+    "quantidade_matricula": Column(int, nullable=True, checks=Check.ge(0)),
+    "ideb_iniciais": Column(float, nullable=True, checks=Check.between(0, 10)),
+    "ideb_finais": Column(float, nullable=True, checks=Check.between(0, 10)),
+    "taxa_abandono_ef_anos_iniciais": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "taxa_abandono_ef_anos_finais": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "pib_per_capita": Column(float, nullable=True, checks=Check.ge(0)),
+    "gasto_por_aluno": Column(float, nullable=True, checks=Check.ge(0)),
+    "is_complete_grouped": Column(bool, nullable=True),
+})
 
 def validate_silver_data(df) -> bool:
     """Validate silver data quality."""
-    if df is None or df.empty:
-        logger.error("Silver data is empty or None")
+    try:
+        silver_schema.validate(df, lazy=True)
+        logger.info("✅ Silver data validation passed")
+        return True
+    except pa.errors.SchemaErrors as e:
+        logger.error(f"❌ Silver data validation failed:\n{e.failure_cases}")
         return False
-    
-    required_columns = [
-        'id_municipio', 'sigla_uf', 'ano', 'nome', 'populacao',
-        'pib', 'gastos_educacao', 'quantidade_matricula', 'ideb_iniciais',
-        'ideb_finais', 'taxa_abandono_ef_anos_iniciais', 'taxa_abandono_ef_anos_finais',
-        'pib_per_capita', 'gasto_por_aluno'
-    ]
-    
-    missing_columns = set(required_columns) - set(df.columns)
-    if missing_columns:
-        logger.error(f"Missing required columns: {missing_columns}")
-        return False
-    
-    # Check for reasonable data ranges
-    validation_checks = {
-        'populacao': (lambda x: x > 0, "Population should be positive"),
-        'pib': (lambda x: x > 0, "GDP should be positive"),
-        'gastos_educacao': (lambda x: x > 0, "Education spending should be positive"),
-        'quantidade_matricula': (lambda x: x > 0, "Enrollments should be positive"),
-        'ideb_iniciais': (lambda x: 0 <= x <= 10, "IDEB should be between 0-10"),
-        'ideb_finais': (lambda x: 0 <= x <= 10, "IDEB should be between 0-10"),
-        'taxa_abandono_ef_anos_iniciais': (lambda x: 0 <= x <= 100, "Dropout rate should be 0-100%"),
-        'taxa_abandono_ef_anos_finais': (lambda x: 0 <= x <= 100, "Dropout rate should be 0-100%")
-    }
-    
-    for col, (check_func, message) in validation_checks.items():
-        if col in df.columns:
-            invalid_count = df[df[col].notna() & ~df[col].apply(check_func)].shape[0]
-            if invalid_count > 0:
-                logger.warning(f"{invalid_count} records with invalid {col}: {message}")
-    
-    logger.info(f"Silver data validation passed. Shape: {df.shape}")
-    return True
+
+gold_schema = DataFrameSchema({
+    # Keys
+    "id_municipio": Column(str, nullable=False),
+    "ano": Column(int, nullable=False, checks=Check.isin([2017, 2019])),
+
+    # Original silver features
+    "pib_per_capita": Column(float, nullable=True, checks=Check.ge(0)),
+    "gasto_por_aluno": Column(float, nullable=True, checks=Check.ge(0)),
+    "ideb_iniciais": Column(float, nullable=True, checks=Check.between(0, 10)),
+    "ideb_finais": Column(float, nullable=True, checks=Check.between(0, 10)),
+    "taxa_abandono_ef_anos_iniciais": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "taxa_abandono_ef_anos_finais": Column(float, nullable=True, checks=Check.between(0, 100)),
+
+    # DEA efficiency metrics
+    "DEA_crs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
+    "DEA_crs_output": Column(float, nullable=True, checks=Check.between(0, 1)),
+    "DEA_vrs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
+    "DEA_vrs_output": Column(float, nullable=True, checks=Check.between(0, 1)),
+    "DEA_irs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
+    "DEA_drs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
+    "DEA_scale_efficiency": Column(float, nullable=True, checks=Check.between(0, 1)),
+    "DEA_returns_nature": Column(str, nullable=True, checks=Check.isin(["Constante", "Crescente", "Decrescente"])),
+})
+
 
 def validate_gold_data(gold_df) -> bool:
     """Validate silver data quality."""
-    if gold_df is None or gold_df.empty:
-        logger.error("Silver data is empty or None")
+    try:
+        gold_schema.validate(df, lazy=True)
+        logger.info("✅ Gold data validation passed")
+        return True
+    except pa.errors.SchemaErrors as e:
+        logger.error(f"❌ Gold data validation failed:\n{e.failure_cases}")
         return False
-    
-    required_columns = [
-        'DEA_crs_input', 'DEA_crs_output', 'DEA_vrs_input', 'DEA_vrs_output',
-        'DEA_irs_input', 'DEA_drs_input', 'DEA_scale_efficiency', 'DEA_returns_nature'
-    ]
-    
-    missing_columns = set(required_columns) - set(gold_df.columns)
-    if missing_columns:
-        logger.error(f"Missing required columns: {missing_columns}")
-        return False
-    
-    # Check for reasonable data ranges
-    validation_checks = {
-        'DEA_crs_input': (lambda x: 0 <= x <= 1, "DEA interval should be 0-1"),
-        'DEA_crs_output': (lambda x: 0 <= x <= 1, "DEA interval should be 0-1"),
-        'DEA_vrs_input': (lambda x: 0 <= x <= 1, "DEA interval should be 0-1"),
-        'DEA_vrs_output': (lambda x: 0 <= x <= 1, "DEA interval should be 0-1"),
-        'DEA_irs_input': (lambda x: 0 <= x <= 1, "DEA interval should be 0-1"),
-        'DEA_drs_input': (lambda x: 0 <= x <= 1, "DEA interval should be 0-1"),
-        'DEA_scale_efficiency': (lambda x: 0 <= x <= 1, "DEA interval should be 0-1")
-    }
-    
-    for col, (check_func, message) in validation_checks.items():
-        if col in gold_df.columns:
-            invalid_count = gold_df[gold_df[col].notna() & ~gold_df[col].apply(check_func)].shape[0]
-            if invalid_count > 0:
-                logger.warning(f"{invalid_count} records with invalid {col}: {message}")
-    
-    logger.info(f"Gold data validation passed. Shape: {gold_df.shape}")
-    return True
