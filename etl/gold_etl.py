@@ -9,6 +9,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from .save_utils import save_dataframe, save_dataframe_to_gcs
 from .diagnostics.data_validation import validate_gold_data
+from .diagnostics import model_diagnostics as md
 
 # Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -134,20 +135,39 @@ def process_gold_data() -> pd.DataFrame:
     logger.info("✅ Gold data processing completed")
     return gold_df
 
-def analyze_gold_data(gold_df):
-    """Generate analysis of gold data."""
-    if gold_df is None:
-        return
-    
-    logger.info("Silver Data Analysis:")
-    logger.info(f"Total records: {len(gold_df)}")
-    logger.info(f"Years: {gold_df['ano'].unique()}")
-    logger.info(f"Municipalities: {gold_df['id_municipio'].nunique()}")
-
 if __name__ == "__main__":
     gold_df = process_gold_data()
     if gold_df is not None:
-        analyze_gold_data(gold_df)
-        logger.info("Silver layer processing completed successfully")
+        md.analyze_gold_data(gold_df)
+
+        # Run tests and log results
+        shapiro_res = md.shapiro_wilk_test(gold_df["DEA_scale_efficiency"].dropna().to_numpy())
+        md.log_test_results("Shapiro-Wilk (Scale Efficiency)", shapiro_res)
+
+        ks_res = md.kolmogorov_smirnov_test(
+            gold_df["DEA_crs_input"].dropna().to_numpy(),
+            gold_df["DEA_vrs_input"].dropna().to_numpy()
+        )
+        md.log_test_results("Kolmogorov-Smirnov (CRS vs VRS)", ks_res)
+
+        normality_res = md.efficiency_normality_test({
+            "Scale Efficiency": gold_df["DEA_scale_efficiency"].dropna().to_numpy()
+        })
+        for model, res in normality_res.items():
+            md.log_test_results(f"Efficiency Normality - {model}", res)
+
+        rts_res = md.returns_to_scale_test(
+            gold_df["DEA_crs_input"].dropna().to_numpy(),
+            gold_df["DEA_vrs_input"].dropna().to_numpy(),
+            gold_df["DEA_drs_input"].dropna().to_numpy(),
+            gold_df["DEA_irs_input"].dropna().to_numpy(),
+        )
+        for comp, res in rts_res.items():
+            md.log_test_results(f"Returns to Scale - {comp}", res)
+
+        scale_eff_res = md.scale_efficiency_test(gold_df["DEA_scale_efficiency"].dropna().to_numpy())
+        md.log_test_results("Scale Efficiency t-test", scale_eff_res)
+
+        logger.info("✅ Gold layer diagnostics completed successfully")
     else:
-        logger.error("Silver layer processing failed")
+        logger.error("❌ Gold layer processing failed")

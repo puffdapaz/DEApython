@@ -8,6 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from .save_utils import save_dataframe, save_dataframe_to_gcs
 from .diagnostics.data_validation import validate_silver_data
+from .diagnostics.model_diagnostics import analyze_silver_data
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -267,16 +268,6 @@ def process_silver_data() -> Optional[bd.Table]:
     except Exception as e:
         logger.error(f"Silver data processing failed: {e}")
         return None
-
-def analyze_silver_data(df):
-    """Generate analysis of silver data."""
-    if df is None:
-        return
-    
-    logger.info("Silver Data Analysis:")
-    logger.info(f"Total records: {len(df)}")
-    logger.info(f"Years: {df['ano'].unique()}")
-    logger.info(f"Municipalities: {df['id_municipio'].nunique()}")
 
 if __name__ == "__main__":
     silver_df = process_silver_data()
