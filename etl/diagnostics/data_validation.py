@@ -1,7 +1,7 @@
 import pandas as pd
 import basedosdados as bd
+import pandera as pa
 from pandera import Column, DataFrameSchema, Check
-import numpy as np
 import yaml
 from typing import Dict, List, Any
 import logging

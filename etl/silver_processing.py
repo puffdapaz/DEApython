@@ -254,6 +254,9 @@ def process_silver_data() -> Optional[bd.Table]:
         # Validate data
         if not validate_silver_data(silver_df):
             raise ValueError("Silver data validation failed")
+        
+        # Data diagnostics
+        analyze_silver_data(silver_df)
 
         # Save data
         local_path = Path("data/processed/silver")
@@ -271,8 +274,3 @@ def process_silver_data() -> Optional[bd.Table]:
 
 if __name__ == "__main__":
     silver_df = process_silver_data()
-    if silver_df is not None:
-        analyze_silver_data(silver_df)
-        logger.info("Silver layer processing completed successfully")
-    else:
-        logger.error("Silver layer processing failed")

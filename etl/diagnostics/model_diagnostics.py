@@ -3,6 +3,7 @@ from scipy import stats
 import logging
 from typing import Dict, Any
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -34,22 +35,23 @@ def analyze_gold_data(gold_df):
 
 def shapiro_wilk_test(efficiency_scores: np.ndarray, alpha: float = 0.05) -> Dict[str, Any]:
     """Shapiro-Wilk test for normality."""
-    try:
-        stat, p_value = stats.shapiro(efficiency_scores)
-        is_normal = p_value > alpha
-        return {
-            "test": "Shapiro-Wilk",
-            "statistic": stat,
-            "p_value": p_value,
-            "is_normal": is_normal,
-            "alpha": alpha,
-            "interpretation": (
-                "Data is normally distributed" if is_normal else "Data is not normally distributed"
-            ),
-        }
-    except Exception as e:
-        logger.error(f"Shapiro-Wilk test failed: {e}")
-        return {"error": str(e)}
+    if efficiency_scores is not None:
+        try:
+            stat, p_value = stats.shapiro(efficiency_scores)
+            is_normal = p_value > alpha
+            return {
+                "test": "Shapiro-Wilk",
+                "statistic": stat,
+                "p_value": p_value,
+                "is_normal": is_normal,
+                "alpha": alpha,
+                "interpretation": (
+                    "Data is normally distributed" if is_normal else "Data is not normally distributed"
+                ),
+            }
+        except Exception as e:
+            logger.error(f"Shapiro-Wilk test failed: {e}")
+            return {"error": str(e)}
 
 
 def kolmogorov_smirnov_test(
