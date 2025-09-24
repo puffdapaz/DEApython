@@ -1,24 +1,56 @@
 # save_utils/save.py
 
 import os
+import numpy as np
+import json
 import pandas as pd
 import tempfile
 from google.cloud import storage
 from dotenv import load_dotenv
 
-def save_dataframe(df: pd.DataFrame, filename: str, directory: str = "data/raw", file_format: str = "csv"):
+import json
+
+def convert_keys(obj):
+    """Recursively convert dict keys to str (for JSON serialization)."""
+    if isinstance(obj, dict):
+        return {str(k): convert_keys(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_keys(i) for i in obj]
+    elif isinstance(obj, np.generic):  # handles np.int64, np.float32 etc.
+        return obj.item()
+    else:
+        return obj
+
+def save_dataframe(obj, filename: str, directory: str = "data/raw", file_format: str = "csv"):
     """
-    Save a DataFrame to the specified directory with given format.
-    Automatically creates directory if it doesn't exist.
+    Save a DataFrame or dict to the specified directory with given format.
+    - Supports DataFrame (csv, xlsx, json)
+    - Supports dict (json)
     """
     os.makedirs(directory, exist_ok=True)
     path = os.path.join(directory, f"{filename}.{file_format}")
-    if file_format == "csv":
-        df.to_csv(path, index=False)
-    elif file_format == "xlsx":
-        df.to_excel(path, index=False)
+
+    if isinstance(obj, pd.DataFrame):
+        if file_format == "csv":
+            obj.to_csv(path, index=False)
+        elif file_format == "xlsx":
+            obj.to_excel(path, index=False)
+        elif file_format == "json":
+            obj.to_json(path, orient="records", indent=2, force_ascii=False)
+        else:
+            raise ValueError(f"Unsupported format for DataFrame: {file_format}")
+
+    elif isinstance(obj, dict):
+        if file_format != "json":
+            raise ValueError("Dict objects can only be saved as JSON")
+
+        clean_obj = convert_keys(obj)  # 🔑 convert numpy keys + values
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(clean_obj, f, indent=2, ensure_ascii=False)
+
     else:
-        raise ValueError(f"Unsupported format: {file_format}")
+        raise TypeError("save_dataframe only supports pandas.DataFrame or dict")
+
     print(f"💾 Saved: {path}")
 
 def save_dataframe_to_gcs(

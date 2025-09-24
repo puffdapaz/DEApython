@@ -127,34 +127,7 @@ def process_gold_data() -> pd.DataFrame:
 
     # Data diagnostics
     md.analyze_gold_data(gold_df)
-
-    shapiro_res = md.shapiro_wilk_test(gold_df["DEA_scale_efficiency"].dropna().to_numpy())
-    md.log_test_results("Shapiro-Wilk Test", shapiro_res)
-
-    
-    ks_res = md.kolmogorov_smirnov_test(
-    gold_df["DEA_crs_input"].dropna().to_numpy(),
-    gold_df["DEA_vrs_input"].dropna().to_numpy()
-    )
-    md.log_test_results("Kolmogorov-Smirnov Test", ks_res)
-
-    normality_res = md.efficiency_normality_test({
-        "Scale Efficiency": gold_df["DEA_scale_efficiency"].dropna().to_numpy()
-    })
-    for name, res in normality_res.items():
-        md.log_test_results(f"Efficiency Normality - {name}", res)
-
-    rts_res = md.returns_to_scale_test(
-        gold_df["DEA_crs_input"].dropna().to_numpy(),
-        gold_df["DEA_vrs_input"].dropna().to_numpy(),
-        gold_df["DEA_drs_input"].dropna().to_numpy(),
-        gold_df["DEA_irs_input"].dropna().to_numpy()
-    )
-    for name, res in rts_res.items():
-        md.log_test_results(f"Returns to Scale - {name}", res)
-
-    scale_eff_res = md.scale_efficiency_test(gold_df["DEA_scale_efficiency"].dropna().to_numpy())
-    md.log_test_results("Scale Efficiency t-test", scale_eff_res)
+    md.run_diagnostics(gold_df, log=True)
 
     # Save single Gold file
     local_path = Path("data/processed/gold")
