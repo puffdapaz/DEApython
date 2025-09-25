@@ -3,10 +3,6 @@ Diagnostics and statistical tests for DEA analysis
 """
 
 from .model_diagnostics import (
-    shapiro_wilk_test,
-    kolmogorov_smirnov_test,
-    returns_to_scale_test,
-    scale_efficiency_test,
     analyze_silver_data,
     analyze_gold_data,
     run_diagnostics,

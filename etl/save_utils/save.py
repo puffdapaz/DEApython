@@ -33,8 +33,8 @@ def save_dataframe(obj, filename: str, directory: str = "data/raw", file_format:
     if isinstance(obj, pd.DataFrame):
         if file_format == "csv":
             obj.to_csv(path, index=False)
-        elif file_format == "xlsx":
-            obj.to_excel(path, index=False)
+        elif file_format == "parquet":
+            obj.to_parquet(path, index=False)
         elif file_format == "json":
             obj.to_json(path, orient="records", indent=2, force_ascii=False)
         else:
@@ -54,7 +54,7 @@ def save_dataframe(obj, filename: str, directory: str = "data/raw", file_format:
     print(f"💾 Saved: {path}")
 
 def save_dataframe_to_gcs(
-    df: pd.DataFrame, 
+    obj,
     filename: str, 
     bucket_name: str, 
     layer: str = "bronze", 
@@ -76,26 +76,26 @@ def save_dataframe_to_gcs(
     tmp_dir = tempfile.gettempdir()
     tmp_file = os.path.join(tmp_dir, f"{filename}.{file_format}")
 
-    # Save locally first
-    if file_format == "parquet":
-        df.to_parquet(tmp_file, index=False)
-    elif file_format == "csv":
-        df.to_csv(tmp_file, index=False)
-    elif file_format == "excel":
-        df.to_excel(tmp_file, index=False)
-    else:
-        raise ValueError("Unsupported file format. Supported: parquet, csv, excel.")
+    if isinstance(obj, pd.DataFrame):
+        if file_format == "parquet":
+            obj.to_parquet(tmp_file, index=False)
+        elif file_format == "csv":
+            obj.to_csv(tmp_file, index=False)
+        elif file_format == "excel":
+            obj.to_excel(tmp_file, index=False)
+        else:
+            raise ValueError("Unsupported file format for DataFrame. Supported: parquet, csv, excel.")
+    
+    elif isinstance(obj, dict):
+        if file_format != "json":
+            raise ValueError("Dict objects can only be saved as JSON")
+        clean_obj = convert_keys(obj)
+        with open(tmp_file, "w", encoding="utf-8") as f:
+            json.dump(clean_obj, f, indent=2, ensure_ascii=False)
 
+    else:
+        raise TypeError("save_dataframe_to_gcs only supports pandas.DataFrame or dict")
     # Upload to GCS
     blob.upload_from_filename(tmp_file)
 
     print(f"✅ Uploaded {filename}.{file_format} to GCP://{bucket_name}/{layer}/")
-
-
-def save_summary(df: pd.DataFrame, filename: str, directory: str = "data/output", file_format: str = "csv"):
-    """
-    Save summary statistics of a DataFrame.
-    Wrapper around save_dataframe.
-    """
-    # e.g. df.describe() if needed outside
-    save_dataframe(df, filename, directory=directory, file_format=file_format)

@@ -1,8 +1,9 @@
 import os
+import pandas as pd
 import numpy as np
 from scipy import stats
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from pathlib import Path
 from dotenv import load_dotenv
 from ..save_utils import save_dataframe, save_dataframe_to_gcs
@@ -24,7 +25,7 @@ def setup_basedosdados() -> str:
     return bucket_name
 
 # ------------------
-# Config & Analysis
+# Descriptive Analysis
 # ------------------
 
 def analyze_silver_data(df):
@@ -36,6 +37,9 @@ def analyze_silver_data(df):
     for year in sorted(df['ano'].unique()):
         year_data = df[df['ano'] == year]
         logger.info(f"Year {year}: {len(year_data)} records")
+        logger.info("\n%s", year_data.describe().to_string())
+        logger.info("\n%s", year_data.corr(numeric_only=True).to_string())
+
 
 def analyze_gold_data(gold_df):
     """Generate analysis of gold data."""
@@ -46,8 +50,8 @@ def analyze_gold_data(gold_df):
     for year in sorted(gold_df['ano'].unique()):
         year_data = gold_df[gold_df['ano'] == year]
         logger.info(f"Year {year}: {len(year_data)} records")
-
-
+        logger.info("\n%s", year_data.describe().to_string())
+        logger.info("\n%s", year_data.corr(numeric_only=True).to_string())
 
 # ------------------
 # Statistical Tests
@@ -108,142 +112,73 @@ def scale_efficiency_function(scale_efficiencies: np.ndarray, alpha: float = 0.0
         return {"error": str(e)}
 
 
-# -----------------------
-# Per-year wrapper helpers
-# -----------------------
-
-def _safe_array(series) -> Optional[np.ndarray]:
-    """Return a numpy array or None if insufficient data."""
-    if series is None:
-        return None
-    arr = np.asarray(series.dropna())
-    if arr.size < 3:
-        # Shapiro requires n>=3; many tests also need some data
-        return None
-    return arr
-
-
-def shapiro_wilk_test(gold_df, column: str, alpha: float = 0.05) -> Dict[int, Dict[str, Any]]:
-    """
-    Run Shapiro-Wilk per year for column. Returns { year: {column: shapiro_result_dict} }.
-    """
-    results: Dict[int, Dict[str, Any]] = {}
-    gold_df = gold_df[gold_df["is_complete_grouped"] == True]
-    for year in sorted(gold_df['ano'].unique()):
-        year_gold_df = gold_df[gold_df['ano'] == year]
-        arr = _safe_array(year_gold_df[column])  # returns None if <3 usable rows
-        if arr is None:
-            results[year] = {column: {"error": "insufficient data (need >=3 non-null)"}}
-        else:
-            results[year] = {column: shapiro_wilk_function(arr, alpha)}
-    return results
-
-
-def kolmogorov_smirnov_test(gold_df, col1: str, col2: str, alpha: float = 0.05) -> Dict[int, Dict[str, Any]]:
-    """
-    Run KS test per year for two columns. Returns { year: {"col1_vs_col2": ks_result_dict} }.
-    """
-    results: Dict[int, Dict[str, Any]] = {}
-    gold_df = gold_df[gold_df["is_complete_grouped"] == True]
-    for year in sorted(gold_df['ano'].unique()):
-        year_gold_df = gold_df[gold_df['ano'] == year]
-        a = _safe_array(year_gold_df[col1])
-        b = _safe_array(year_gold_df[col2])
-        if a is None or b is None:
-            results[year] = {f"{col1}_vs_{col2}": {"error": "insufficient data (need >=3 non-null in each sample)"}}
-        else:
-            results[year] = {f"{col1}_vs_{col2}": kolmogorov_smirnov_function(a, b, alpha)}
-    return results
-
-
-def scale_efficiency_test(gold_df, column: str = "DEA_scale_efficiency", alpha: float = 0.05) -> Dict[int, Dict[str, Any]]:
-    """
-    Run scale_efficiency_test per year. Returns { year: {column: ttest_result_dict} }.
-    """
-    results: Dict[int, Dict[str, Any]] = {}
-    gold_df = gold_df[gold_df["is_complete_grouped"] == True]
-    for year in sorted(gold_df['ano'].unique()):
-        year_gold_df = gold_df[gold_df['ano'] == year]
-        arr = _safe_array(year_gold_df[column])
-        if arr is None:
-            results[year] = {column: {"error": "insufficient data (need >=3 non-null)"}}
-        else:
-            results[year] = {column: scale_efficiency_function(arr, alpha)}
-    return results
-
-
-def returns_to_scale_test(gold_df, crs_col: str = "DEA_crs_input", vrs_col: str = "DEA_vrs_input",
-                             drs_col: str = "DEA_drs_input", irs_col: str = "DEA_irs_input",
-                             alpha: float = 0.05) -> Dict[int, Dict[str, Any]]:
-    """
-    Run returns-to-scale comparisons per year (CRS vs VRS, IRS vs DRS).
-    Returns { year: {"crs_vs_vrs": {...}, "irs_vs_drs": {...}} }.
-    """
-    results: Dict[int, Dict[str, Any]] = {}
-    gold_df = gold_df[gold_df["is_complete_grouped"] == True]
-    for year in sorted(gold_df['ano'].unique()):
-        year_gold_df = gold_df[gold_df['ano'] == year]
-        a = _safe_array(year_gold_df[crs_col])
-        b = _safe_array(year_gold_df[vrs_col])
-        c = _safe_array(year_gold_df[drs_col])
-        d = _safe_array(year_gold_df[irs_col])
-        year_res: Dict[str, Any] = {}
-        if a is None or b is None:
-            year_res["crs_vs_vrs"] = {"error": "insufficient data for crs/vrs (need >=3 non-null)"} 
-        else:
-            year_res["crs_vs_vrs"] = kolmogorov_smirnov_function(a, b, alpha)
-        if c is None or d is None:
-            year_res["irs_vs_drs"] = {"error": "insufficient data for irs/drs (need >=3 non-null)"}
-        else:
-            year_res["irs_vs_drs"] = kolmogorov_smirnov_function(d, c, alpha)  # note: order optional
-        results[year] = year_res
-    return results
-
-
-# -------------
-# Convenience runner
-# -------------
-
-def run_diagnostics(gold_df, *, log: bool = True) -> Dict[str, Dict[int, Dict[str, Any]]]:
-    """
-    Run a standard set of diagnostics per year and return a nested dict:
-    If log=True, also send nicely-formatted output to logger using log_test_results.
-    """
+def run_diagnostics(gold_df, *, log: bool = True):
     if gold_df is None:
         logger.warning("No gold_df provided to run_diagnostics")
         return {}
 
-    diagnostics: Dict[str, Dict[int, Dict[str, Any]]] = {}
+    gold_df = gold_df[gold_df["is_complete_grouped"] == True]
 
-    # Shapiro on scale efficiency
-    diagnostics["shapiro_scale_eff"] = shapiro_wilk_test(gold_df, "DEA_scale_efficiency")
+    diagnostics_tests = {}
+    diagnostics_summary = []
 
-    # KS CRS vs VRS
-    diagnostics["ks_crs_vs_vrs"] = kolmogorov_smirnov_test(gold_df, "DEA_crs_input", "DEA_vrs_input")
+    for year in sorted(gold_df['ano'].unique()):
+        year_gold_df = gold_df[gold_df['ano'] == year]
+        year_tests = {}
 
-    # Scale efficiency t-test per year
-    diagnostics["scale_eff"] = scale_efficiency_test(gold_df, "DEA_scale_efficiency")
+        # Statistical tests
+        year_tests["shapiro_scale_eff"] = shapiro_wilk_function(
+            year_gold_df["DEA_scale_efficiency"].to_numpy()
+        )
+        year_tests["ks_crs_vs_vrs"] = kolmogorov_smirnov_function(
+            year_gold_df["DEA_crs_input"].to_numpy(),
+            year_gold_df["DEA_vrs_input"].to_numpy()
+        )
+        year_tests["scale_eff"] = scale_efficiency_function(
+            year_gold_df["DEA_scale_efficiency"].to_numpy()
+        )
+        year_tests["returns_to_scale"] = {
+            "crs_vs_vrs": kolmogorov_smirnov_function(
+                year_gold_df["DEA_crs_input"].to_numpy(),
+                year_gold_df["DEA_vrs_input"].to_numpy()
+            ),
+            "irs_vs_drs": kolmogorov_smirnov_function(
+                year_gold_df["DEA_irs_input"].to_numpy(),
+                year_gold_df["DEA_drs_input"].to_numpy()
+            ),
+        }
 
-    # Returns to scale (CRS vs VRS and IRS vs DRS)
-    diagnostics["returns_to_scale"] = returns_to_scale_test(gold_df)
+        diagnostics_tests[year] = year_tests
 
-    if log:
-        # use your existing logger helper to print nested results
-        for diag_name, diag_data in diagnostics.items():
-            for year, res in diag_data.items():
-                # `res` is a dict of {metric: result dict}
-                log_test_results(f"{diag_name} - Year {year}", res)
+        # Descriptive + correlation
+        desc = year_gold_df.describe().reset_index()
+        desc['ano'] = year  # add year for stacking all years
+        diagnostics_summary.append(desc)
 
-    # Save statistic tests file
-    # Set up Base dos Dados
+        corr = year_gold_df.corr(numeric_only=True).reset_index()
+        corr['ano'] = year
+        diagnostics_summary.append(corr)
+
+        if log:
+            log_test_results(f"Year {year}", year_tests)
+
+    # Combine descriptive/corr into a single DataFrame
+    diagnostics_summary_df = pd.concat(diagnostics_summary, ignore_index=True)
+
+    # Save files locally & GCS
     bucket_name = setup_basedosdados()
     local_path = Path("data/processed/gold")
     local_path.mkdir(parents=True, exist_ok=True)
-    
-    save_dataframe(diagnostics, "diagnostics_summary", directory="data/processed/gold", file_format="json")
-    save_dataframe_to_gcs(gold_df, "diagnostics_summary", bucket_name, layer="gold")
 
-    return diagnostics
+    # 1. Statistical tests → JSON
+    save_dataframe(diagnostics_tests, "diagnostics_tests", directory=local_path, file_format="json")
+    save_dataframe_to_gcs(diagnostics_tests, "diagnostics_tests", bucket_name, layer="gold", file_format="json")
+
+    # 2. Describe + correlation → Parquet
+    save_dataframe(diagnostics_summary_df, "diagnostics_summary", directory=local_path, file_format="csv")
+    save_dataframe_to_gcs(diagnostics_summary_df, "diagnostics_summary", bucket_name, layer="gold", file_format="parquet")
+
+    return diagnostics_tests, diagnostics_summary_df
 
 
 def log_test_results(test_name: str, results, indent: int = 0):
