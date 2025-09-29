@@ -39,7 +39,6 @@ def setup_basedosdados() -> str:
         raise ValueError("Missing required environment variables")
     
     bd.config.billing_project_id = billing_project_id
-    logger.info("Base dos Dados configured successfully")
     
     return bucket_name
 
@@ -229,8 +228,6 @@ def add_completeness_flags(df: pd.DataFrame, value_columns: List[str]) -> pd.Dat
 def process_silver_data() -> Optional[bd.Table]:
     """Process silver layer data."""
     try:
-        logger.info("Starting silver data processing")
-        
         # Load configurations
         dea_config, paths = load_configs()
         
@@ -239,7 +236,6 @@ def process_silver_data() -> Optional[bd.Table]:
         
         # Get and execute query
         query = get_silver_query()
-        logger.info("Executing silver query...")
         silver_df = bd.read_sql(query)
         
         value_columns = [
@@ -260,12 +256,13 @@ def process_silver_data() -> Optional[bd.Table]:
 
         # Save data
         local_path = Path("data/processed/silver")
+        layer = "silver"
         local_path.mkdir(parents=True, exist_ok=True)
         
         save_dataframe(silver_df, "silver_data", directory=local_path)
         save_dataframe_to_gcs(silver_df, "silver_data", bucket_name, layer="silver")
         
-        logger.info("Silver data processing completed successfully")
+        logger.info(f"Processing completed. Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
         return silver_df
         
     except Exception as e:

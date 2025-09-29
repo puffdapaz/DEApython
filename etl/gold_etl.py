@@ -39,8 +39,6 @@ def setup_basedosdados() -> str:
     if not billing_project_id or not bucket_name:
         raise ValueError("Missing required environment variables")
     
-    logger.info("Base dos Dados configured successfully")
-    
     return bucket_name
 
 def perform_dea_analysis() -> pd.DataFrame:
@@ -66,7 +64,7 @@ def perform_dea_analysis() -> pd.DataFrame:
         return X, Y
 
     for year, subset in df_complete.groupby("ano"):
-        logger.info(f"Running DEA for year {year}")
+        print(f"Running DEA for year {year}")
         X, Y = prepare_matrices(subset)
 
         dea_models = {
@@ -113,7 +111,7 @@ def perform_dea_analysis() -> pd.DataFrame:
     return gold_df
 
 def process_gold_data() -> pd.DataFrame:
-    logger.info("Starting Gold data modeling process...")
+
     dea_config, paths = load_configs()
   
     # Set up Base dos Dados
@@ -131,12 +129,13 @@ def process_gold_data() -> pd.DataFrame:
 
     # Save single Gold file
     local_path = Path("data/processed/gold")
+    layer = "gold"
     local_path.mkdir(parents=True, exist_ok=True)
     
     save_dataframe(gold_df, "gold_data", directory=local_path)
     save_dataframe_to_gcs(gold_df, "gold_data", bucket_name, layer="gold")
 
-    logger.info("✅ Gold data processing completed")
+    logger.info(f"Modeling finished. Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
     return gold_df
 
 if __name__ == "__main__":

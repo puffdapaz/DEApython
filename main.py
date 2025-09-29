@@ -14,26 +14,26 @@ from etl import gold_etl
 
 def main():
     """Main pipeline execution function"""
-    print("🚀 Starting DEApython Pipeline...")
+    print(".:.Starting DEApython Pipeline.:.")
     
     try:
         # Step 1: Bronze Ingestion
-        print("📥 Processing bronze data...")
+        print("Ingesting data...")
         dataframes = bronze_ingestion()
         
         # Step 2: Silver Processing
-        print("⚙️ Processing silver data...")
+        print("Processing data...")
         silver_df = silver_processing.process_silver_data()
         
         # Step 3: Gold DEA Model
-        print("✨ Processing gold data...")
+        print("Applying Model...")
         gold_df = gold_etl.process_gold_data()
 
         
-        print("✅ Pipeline completed successfully!")
+        print("DEApython Workflow completed successfully!")
         
     except Exception as e:
-        print(f"❌ Pipeline failed: {e}")
+        print(f"Pipeline failed: {e}")
         raise
 
 if __name__ == "__main__":

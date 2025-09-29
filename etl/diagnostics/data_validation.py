@@ -84,11 +84,11 @@ def validate_bronze_data(dataframes: Dict[str, bd.Table]) -> bool:
             try:
                 if name in schemas:
                     schemas[name].validate(df, lazy=True)
-                    logger.info(f"✅ {name} validation passed")
+                    print(f"{name} Dataframe validation passed. {df.shape}")
                 else:
                     logger.warning(f"No schema defined for {name}, skipping validation")
             except pa.errors.SchemaErrors as e:
-                logger.error(f"❌ {name} validation failed:\n{e.failure_cases}")
+                logger.error(f"{name} Dataframe validation failed:\n{e.failure_cases}")
                 all_valid = False
     return all_valid
 
@@ -114,10 +114,10 @@ def validate_silver_data(df) -> bool:
     """Validate silver data quality."""
     try:
         silver_schema.validate(df, lazy=True)
-        logger.info("✅ Silver data validation passed")
+        print(f"Silver data validation passed. {df.shape}")
         return True
     except pa.errors.SchemaErrors as e:
-        logger.error(f"❌ Silver data validation failed:\n{e.failure_cases}")
+        logger.error(f"Silver data validation failed:\n{e.failure_cases}")
         return False
 
 gold_schema = DataFrameSchema({
@@ -148,8 +148,8 @@ def validate_gold_data(gold_df) -> bool:
     """Validate silver data quality."""
     try:
         gold_schema.validate(gold_df, lazy=True)
-        logger.info("✅ Gold data validation passed")
+        print(f"Gold data validation passed. {gold_df.shape}")
         return True
     except pa.errors.SchemaErrors as e:
-        logger.error(f"❌ Gold data validation failed:\n{e.failure_cases}")
+        logger.error(f"Gold data validation failed:\n{e.failure_cases}")
         return False

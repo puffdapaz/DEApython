@@ -37,16 +37,13 @@ def setup_basedosdados() -> str:
         raise ValueError("Missing required environment variables: billing_project_id or gcp_bucket_name")
     
     bd.config.billing_project_id = billing_project_id
-    logger.info(f"Base dos Dados configured with billing project: {billing_project_id}")
     
     return bucket_name
 
 def load_bronze_data(query: str, query_name: str) -> Optional[bd.Table]:
     """Load data from Base dos Dados with error handling."""
     try:
-        logger.info(f"Executing query: {query_name}")
         df = bd.read_sql(query)
-        logger.info(f"Successfully loaded {query_name}, shape: {df.shape}")
         return df
     except Exception as e:
         logger.error(f"Error loading {query_name}: {e}")
@@ -98,12 +95,10 @@ def get_bronze_queries() -> Dict[str, str]:
 
 def bronze_ingestion():
     """Main function for bronze layer data ingestion."""
-    logger.info("Starting bronze data ingestion")
     
     try:
         # Load configurations
         dea_config, paths = load_configs()
-        logger.info("Configurations loaded successfully")
         
         # Set up Base dos Dados
         bucket_name = setup_basedosdados()
@@ -123,6 +118,7 @@ def bronze_ingestion():
         
         # Save data
         local_path = Path("data/raw")
+        layer = "bronze"
         local_path.mkdir(parents=True, exist_ok=True)
 
         for filename, df in dataframes.items():
@@ -134,11 +130,11 @@ def bronze_ingestion():
                         # Save to GCS
                         save_dataframe_to_gcs(df, f"bronze_{filename}", bucket_name, layer="bronze")
                         
-                        logger.info(f"Successfully saved {filename}")
                     except Exception as e:
                         logger.error(f"Error saving {filename}: {e}")
         
-        logger.info("Bronze data ingestion completed successfully")
+        logger.info(f"Ingestion completed")
+        logger.info(f"Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
         return dataframes
         
     except Exception as e:

@@ -51,8 +51,6 @@ def save_dataframe(obj, filename: str, directory: str = "data/raw", file_format:
     else:
         raise TypeError("save_dataframe only supports pandas.DataFrame or dict")
 
-    print(f"💾 Saved: {path}")
-
 def save_dataframe_to_gcs(
     obj,
     filename: str, 
@@ -97,5 +95,3 @@ def save_dataframe_to_gcs(
         raise TypeError("save_dataframe_to_gcs only supports pandas.DataFrame or dict")
     # Upload to GCS
     blob.upload_from_filename(tmp_file)
-
-    print(f"✅ Uploaded {filename}.{file_format} to GCP://{bucket_name}/{layer}/")

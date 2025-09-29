@@ -20,8 +20,6 @@ def setup_basedosdados() -> str:
     if not billing_project_id or not bucket_name:
         raise ValueError("Missing required environment variables")
     
-    logger.info("Base dos Dados configured successfully")
-    
     return bucket_name
 
 # ------------------
@@ -33,12 +31,12 @@ def analyze_silver_data(df):
     if df is None:
         logger.warning("No DataFrame provided for analysis.")
         return
-    logger.info("🔎 Silver Data Analysis:")
+    print("Silver Data Analysis:")
     for year in sorted(df['ano'].unique()):
         year_data = df[df['ano'] == year]
-        logger.info(f"Year {year}: {len(year_data)} records")
-        logger.info("\n%s", year_data.describe().to_string())
-        logger.info("\n%s", year_data.corr(numeric_only=True).to_string())
+        print(f"Year {year}: {len(year_data)} records")
+        print("\n%s", year_data.describe().to_string())
+        print("\n%s", year_data.corr(numeric_only=True).to_string())
 
 
 def analyze_gold_data(gold_df):
@@ -46,12 +44,12 @@ def analyze_gold_data(gold_df):
     if gold_df is None:
         logger.warning("No DataFrame provided for analysis.")
         return
-    logger.info("🔎 Gold Data Analysis:")
+    print("Gold Data Analysis:")
     for year in sorted(gold_df['ano'].unique()):
         year_data = gold_df[gold_df['ano'] == year]
-        logger.info(f"Year {year}: {len(year_data)} records")
-        logger.info("\n%s", year_data.describe().to_string())
-        logger.info("\n%s", year_data.corr(numeric_only=True).to_string())
+        print(f"Year {year}: {len(year_data)} records")
+        print("\n%s", year_data.describe().to_string())
+        print("\n%s", year_data.corr(numeric_only=True).to_string())
 
 # ------------------
 # Statistical Tests
@@ -175,7 +173,7 @@ def run_diagnostics(gold_df, *, log: bool = True):
     save_dataframe_to_gcs(diagnostics_tests, "diagnostics_tests", bucket_name, layer="gold", file_format="json")
 
     # 2. Describe + correlation → Parquet
-    save_dataframe(diagnostics_summary_df, "diagnostics_summary", directory=local_path, file_format="csv")
+    save_dataframe(diagnostics_summary_df, "diagnostics_summary", directory=local_path, file_format="parquet")
     save_dataframe_to_gcs(diagnostics_summary_df, "diagnostics_summary", bucket_name, layer="gold", file_format="parquet")
 
     return diagnostics_tests, diagnostics_summary_df
@@ -184,7 +182,7 @@ def run_diagnostics(gold_df, *, log: bool = True):
 def log_test_results(test_name: str, results, indent: int = 0):
     """Nicely format and log a single test result (handles nested dicts)."""
     prefix = " " * indent
-    logger.info(f"{prefix}📊 {test_name} Results")
+    print(f"{prefix}📊 {test_name} Results")
 
     if isinstance(results, dict):
         for k, v in results.items():
@@ -192,13 +190,13 @@ def log_test_results(test_name: str, results, indent: int = 0):
                 log_test_results(k, v, indent + 3)
             else:
                 if isinstance(v, float):
-                    logger.info(f"{prefix}   {k}: {v:.4f}")
+                    print(f"{prefix}   {k}: {v:.4f}")
                 else:
-                    logger.info(f"{prefix}   {k}: {v}")
+                    print(f"{prefix}   {k}: {v}")
     else:
         # handle strings or other single values
-        logger.info(f"{prefix}   {results}")
+        print(f"{prefix}   {results}")
 
     if indent == 0:
-        logger.info("-" * 40)
+        print("-" * 40)
 
