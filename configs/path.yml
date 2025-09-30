@@ -1,19 +1,15 @@
-# path.yml
 # Paths for data ingestion and outputs
 paths:
   root: "data"
   bronze: "data/raw"
   silver: "data/processed/silver"
   gold: "data/processed/gold"
-  output: "data/output"
 
-bronze:
-  gcs_path: "gs://your-bucket/bronze"
+layers:
+  bronze: "bronze"
+  silver: "silver"
+  gold: "gold"
 
-silver:
-  gcs_path: "gs://your-bucket/silver"
-  output_filename: "silver_data"
+buckets:
+  default: "your-bucket"
 
-gold:
-  gcs_path: "gs://your-bucket/gold"
-  output_filename: "gold_data"

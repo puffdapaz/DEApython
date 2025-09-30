@@ -2,11 +2,11 @@ import basedosdados as bd
 import os
 import yaml
 import logging
-from typing import Dict, List, Optional
 import pandas as pd
+from .save_utils import save as save
+from typing import List, Optional
 from pathlib import Path
 from dotenv import load_dotenv
-from .save_utils import save_dataframe, save_dataframe_to_gcs
 from .diagnostics.data_validation import validate_silver_data
 from .diagnostics.model_diagnostics import analyze_silver_data
 
@@ -229,7 +229,7 @@ def process_silver_data() -> Optional[bd.Table]:
     """Process silver layer data."""
     try:
         # Load configurations
-        dea_config, paths = load_configs()
+        layer, paths = load_configs()
         
         # Set up Base dos Dados
         bucket_name = setup_basedosdados()
@@ -255,12 +255,12 @@ def process_silver_data() -> Optional[bd.Table]:
         analyze_silver_data(silver_df)
 
         # Save data
-        local_path = Path("data/processed/silver")
-        layer = "silver"
+        local_path = Path(paths["paths"]["silver"])
+        layer = paths["layers"]["silver"]
         local_path.mkdir(parents=True, exist_ok=True)
         
-        save_dataframe(silver_df, "silver_data", directory=local_path)
-        save_dataframe_to_gcs(silver_df, "silver_data", bucket_name, layer="silver")
+        save.save_dataframe(silver_df, "silver_data", directory=local_path)
+        save.save_dataframe_to_gcs(silver_df, "silver_data", bucket_name, layer=layer)
         
         logger.info(f"Processing completed. Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
         return silver_df

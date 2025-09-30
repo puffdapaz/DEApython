@@ -31,7 +31,7 @@ def analyze_silver_data(df):
     if df is None:
         logger.warning("No DataFrame provided for analysis.")
         return
-    print("Silver Data Analysis:")
+    print("Silver data Analysis:")
     for year in sorted(df['ano'].unique()):
         year_data = df[df['ano'] == year]
         print(f"Year {year}: {len(year_data)} records")
@@ -44,7 +44,7 @@ def analyze_gold_data(gold_df):
     if gold_df is None:
         logger.warning("No DataFrame provided for analysis.")
         return
-    print("Gold Data Analysis:")
+    print("Gold data Analysis:")
     for year in sorted(gold_df['ano'].unique()):
         year_data = gold_df[gold_df['ano'] == year]
         print(f"Year {year}: {len(year_data)} records")

@@ -2,10 +2,10 @@ import basedosdados as bd
 import os
 import yaml
 import logging
-from typing import Dict, List, Optional
+from .save_utils import save as save
+from typing import Dict, Optional
 from pathlib import Path
 from dotenv import load_dotenv
-from .save_utils.save import save_dataframe, save_dataframe_to_gcs
 from .diagnostics.data_validation import validate_bronze_data
 
 # Set up logging
@@ -98,7 +98,7 @@ def bronze_ingestion():
     
     try:
         # Load configurations
-        dea_config, paths = load_configs()
+        layer, paths = load_configs()
         
         # Set up Base dos Dados
         bucket_name = setup_basedosdados()
@@ -117,18 +117,18 @@ def bronze_ingestion():
             raise ValueError("Bronze data validation failed")
         
         # Save data
-        local_path = Path("data/raw")
-        layer = "bronze"
+        local_path = Path(paths["paths"]["bronze"])
+        layer = paths["layers"]["bronze"]
         local_path.mkdir(parents=True, exist_ok=True)
 
         for filename, df in dataframes.items():
                 if df is not None:
                     try:
                         # Save locally
-                        save_dataframe(df, f"bronze_{filename}", directory=local_path)
+                        save.save_dataframe(df, f"bronze_{filename}", directory=local_path)
                         
                         # Save to GCS
-                        save_dataframe_to_gcs(df, f"bronze_{filename}", bucket_name, layer="bronze")
+                        save.save_dataframe_to_gcs(df, f"bronze_{filename}", bucket_name, layer=layer)
                         
                     except Exception as e:
                         logger.error(f"Error saving {filename}: {e}")

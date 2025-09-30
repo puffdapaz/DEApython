@@ -1,4 +1,3 @@
-import pandas as pd
 import basedosdados as bd
 import pandera as pa
 from pandera import Column, DataFrameSchema, Check
@@ -84,11 +83,11 @@ def validate_bronze_data(dataframes: Dict[str, bd.Table]) -> bool:
             try:
                 if name in schemas:
                     schemas[name].validate(df, lazy=True)
-                    print(f"{name} Dataframe validation passed. {df.shape}")
+                    print(f"{name} validation passed. {df.shape}")
                 else:
                     logger.warning(f"No schema defined for {name}, skipping validation")
             except pa.errors.SchemaErrors as e:
-                logger.error(f"{name} Dataframe validation failed:\n{e.failure_cases}")
+                logger.error(f"{name} validation failed:\n{e.failure_cases}")
                 all_valid = False
     return all_valid
 

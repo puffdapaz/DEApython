@@ -3,11 +3,10 @@ import yaml
 import logging
 import pandas as pd
 import numpy as np
-from scipy import stats
+from .save_utils import save as save
 from dealib import RTS, Orientation, dea
 from pathlib import Path
 from dotenv import load_dotenv
-from .save_utils import save_dataframe, save_dataframe_to_gcs
 from .diagnostics.data_validation import validate_gold_data
 from .diagnostics import model_diagnostics as md
 
@@ -45,7 +44,7 @@ def perform_dea_analysis() -> pd.DataFrame:
     """Run DEA on complete Silver dataset and return one Gold DataFrame."""
 
     # 1. Load Silver data
-    df_full = pd.read_csv("data/processed/silver/silver_data.csv")
+    df_full = pd.read_parquet("data/processed/silver/silver_data.parquet")
     
     # Only use complete cases for DEA calculations
     df_complete = df_full[df_full["is_complete_grouped"] == True]
@@ -112,7 +111,7 @@ def perform_dea_analysis() -> pd.DataFrame:
 
 def process_gold_data() -> pd.DataFrame:
 
-    dea_config, paths = load_configs()
+    layer, paths = load_configs()
   
     # Set up Base dos Dados
     bucket_name = setup_basedosdados()
@@ -128,12 +127,12 @@ def process_gold_data() -> pd.DataFrame:
     md.run_diagnostics(gold_df, log=True)
 
     # Save single Gold file
-    local_path = Path("data/processed/gold")
-    layer = "gold"
+    local_path = Path(paths["paths"]["gold"])
+    layer = paths["layers"]["gold"]
     local_path.mkdir(parents=True, exist_ok=True)
     
-    save_dataframe(gold_df, "gold_data", directory=local_path)
-    save_dataframe_to_gcs(gold_df, "gold_data", bucket_name, layer="gold")
+    save.save_dataframe(gold_df, "gold_data", directory=local_path)
+    save.save_dataframe_to_gcs(gold_df, "gold_data", bucket_name, layer=layer)
 
     logger.info(f"Modeling finished. Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
     return gold_df

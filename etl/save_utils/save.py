@@ -8,8 +8,6 @@ import tempfile
 from google.cloud import storage
 from dotenv import load_dotenv
 
-import json
-
 def convert_keys(obj):
     """Recursively convert dict keys to str (for JSON serialization)."""
     if isinstance(obj, dict):
@@ -21,7 +19,7 @@ def convert_keys(obj):
     else:
         return obj
 
-def save_dataframe(obj, filename: str, directory: str = "data/raw", file_format: str = "csv"):
+def save_dataframe(obj, filename: str, directory: str = "data/raw", file_format: str = "parquet"):
     """
     Save a DataFrame or dict to the specified directory with given format.
     - Supports DataFrame (csv, xlsx, json)
