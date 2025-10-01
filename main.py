@@ -28,7 +28,7 @@ def main():
         print("Applying model...")
         gold_etl.process_gold_data()
 
-        print("DEApython workflow completed successfully!")
+        print("DEApython workflow completed!")
         
     except Exception as e:
         print(f"Pipeline failed: {e}")

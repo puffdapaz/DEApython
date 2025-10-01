@@ -6,7 +6,7 @@ from .save_utils import save as save
 from typing import Dict, Optional
 from pathlib import Path
 from dotenv import load_dotenv
-from .diagnostics.data_validation import validate_bronze_data
+from .diagnostics.data_validation import schemas, validate_data
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -40,80 +40,55 @@ def setup_basedosdados() -> str:
     
     return bucket_name
 
-def load_bronze_data(query: str, query_name: str) -> Optional[bd.Table]:
-    """Load data from Base dos Dados with error handling."""
+def load_bronze_data(layer: str = "bronze") -> Dict[str, str]:
+    """
+    Load queries from YAML configuration file.
+    Args:
+        layer: Data layer ('bronze', 'silver', 'gold')
+    Returns:
+        Dictionary of query names to SQL strings
+    """
     try:
-        df = bd.read_sql(query)
-        return df
-    except Exception as e:
-        logger.error(f"Error loading {query_name}: {e}")
-        return None
+        with open("configs/queries.yml", "r", encoding="utf-8") as f:
+            all_queries = yaml.safe_load(f)
 
-def get_bronze_queries() -> Dict[str, str]:
-    """Return all bronze layer SQL queries."""
-    return {
-        "population": """
-            SELECT id_municipio, sigla_uf, ano, populacao
-            FROM `basedosdados.br_ibge_populacao.municipio`
-            WHERE ano IN (2017, 2019)
-        """,
-        "pib": """
-            SELECT id_municipio, ano, pib
-            FROM `basedosdados.br_ibge_pib.municipio`
-            WHERE ano IN (2017, 2019)
-        """,
-        "education_spending": """
-            SELECT id_municipio, sigla_uf, ano, valor
-            FROM `basedosdados.br_me_siconfi.municipio_despesas_funcao`
-            WHERE ano IN (2017, 2019)
-            AND estagio = "Despesas Pagas"
-            AND conta = "Educação"
-        """,
-        "enrollments": """
-            SELECT id_municipio, sigla_uf, ano, SUM(quantidade_matricula) as quantidade_matricula
-            FROM `basedosdados.br_inep_sinopse_estatistica_educacao_basica.etapa_ensino_serie`
-            WHERE ano IN (2017, 2019)
-            AND rede = "Municipal"
-            AND etapa_ensino LIKE "Ensino Fundamental%" 
-            GROUP BY id_municipio, sigla_uf, ano
-        """,
-        "ideb": """
-            SELECT id_municipio, sigla_uf, ano, anos_escolares, ideb
-            FROM `basedosdados.br_inep_ideb.municipio`
-            WHERE ano IN (2017, 2019)
-            AND ensino = "fundamental"
-            AND rede = "municipal"
-        """,
-        "dropout_rates": """
-            SELECT id_municipio, ano, taxa_abandono_ef_anos_iniciais, taxa_abandono_ef_anos_finais
-            FROM `basedosdados.br_inep_indicadores_educacionais.municipio`
-            WHERE ano IN (2017, 2019)
-            AND rede = "municipal"
-            AND localizacao = "total"
-        """
-    }
+        layer_queries = all_queries.get(f"{layer}_queries", {})
+        
+        if not layer_queries:
+            logger.warning(f"No queries found for layer: {layer}")
+            return {}
+        return layer_queries
+    
+    except Exception as e:
+        logger.error(f"Unexpected error loading queries: {e}")
+        raise
 
 def bronze_ingestion():
     """Main function for bronze layer data ingestion."""
-    
     try:
         # Load configurations
-        layer, paths = load_configs()
+        dea_config, paths = load_configs()
         
         # Set up Base dos Dados
         bucket_name = setup_basedosdados()
         
-        # Get all queries
-        queries = get_bronze_queries()
+        # Load queries directly from config
+        queries = load_bronze_data("bronze")
+        
+        if not queries:
+            raise ValueError("No bronze queries found in configuration")
         
         # Load all data
         dataframes = {}
         for query_name, query in queries.items():
-            df = load_bronze_data(query, query_name)
-            dataframes[query_name] = df
+            try:
+                df = bd.read_sql(query, billing_project_id=os.getenv("billing_project_id"))
+                dataframes[query_name] = df
+            except Exception as e:
+                logger.error(f"Error running query {query_name}: {e}")
         
         # Validate data
-        if not validate_bronze_data(dataframes):
+        if not validate_data(dataframes, schema_map=schemas):
             raise ValueError("Bronze data validation failed")
         
         # Save data
@@ -122,23 +97,19 @@ def bronze_ingestion():
         local_path.mkdir(parents=True, exist_ok=True)
 
         for filename, df in dataframes.items():
-                if df is not None:
-                    try:
-                        # Save locally
-                        save.save_dataframe(df, f"bronze_{filename}", directory=local_path)
-                        
-                        # Save to GCS
-                        save.save_dataframe_to_gcs(df, f"bronze_{filename}", bucket_name, layer=layer)
-                        
-                    except Exception as e:
-                        logger.error(f"Error saving {filename}: {e}")
+            if df is not None:
+                try:
+                    save.save_data(df, f"bronze_{filename}", directory=local_path)
+                    save.save_data_to_gcs(df, f"bronze_{filename}", bucket_name, layer=layer)
+                except Exception as e:
+                    logger.error(f"Error saving {filename}: {e}")
         
-        logger.info(f"Ingestion completed")
+        print(f"Ingestion completed")
         logger.info(f"Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
         return dataframes
         
     except Exception as e:
-        logger.error(f"Bronze ingestion failed: {e}")
+        logger.error(f"Ingestion failed: {e}")
         raise
 
 if __name__ == "__main__":

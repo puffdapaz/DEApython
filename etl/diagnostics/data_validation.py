@@ -1,27 +1,35 @@
-import basedosdados as bd
+import pandas as pd
 import pandera as pa
 from pandera import Column, DataFrameSchema, Check
 import yaml
-from typing import Dict, List, Any
+from typing import Union, Dict
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 def load_configs() -> tuple:
-    """Load configurations from YAML files."""
-    try:
-        with open("configs/dea_config.yml", "r") as f:
-            dea_config = yaml.safe_load(f)
-        with open("configs/path.yml", "r") as f:
-            paths = yaml.safe_load(f)
-        return dea_config, paths
-    except FileNotFoundError as e:
-        logger.error(f"Configuration file not found: {e}")
-        raise
-    except yaml.YAMLError as e:
-        logger.error(f"Error parsing YAML config: {e}")
-        raise
+    """Load configurations from YAML files with proper type hints"""
+    config_files = {
+        "dea_config": "configs/dea_config.yml",
+        "paths": "configs/path.yml"
+    }
+    configs = {}
+    
+    for name, filepath in config_files.items():
+        try:
+            with open(filepath, "r") as f:
+                configs[name] = yaml.safe_load(f)
+        except FileNotFoundError as e:
+            logger.error(f"Configuration file not found: {filepath}")
+            raise
+        except yaml.YAMLError as e:
+            logger.error(f"Error parsing YAML config {filepath}: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error loading {filepath}: {e}")
+            raise
+    return configs["dea_config"], configs["paths"]
 
 # Define schemas for bronze datasets
 population_schema = DataFrameSchema({
@@ -75,22 +83,6 @@ schemas = {
     "dropout_rates": dropout_rates_schema,
 }
 
-def validate_bronze_data(dataframes: Dict[str, bd.Table]) -> bool:
-    """Validate that all required bronze data was loaded successfully."""
-    all_valid = True
-    for name, df in dataframes.items():
-        if df is not None:
-            try:
-                if name in schemas:
-                    schemas[name].validate(df, lazy=True)
-                    print(f"{name} validation passed. {df.shape}")
-                else:
-                    logger.warning(f"No schema defined for {name}, skipping validation")
-            except pa.errors.SchemaErrors as e:
-                logger.error(f"{name} validation failed:\n{e.failure_cases}")
-                all_valid = False
-    return all_valid
-
 silver_schema = DataFrameSchema({
     "id_municipio": Column(str, nullable=False),
     "sigla_uf": Column(str, nullable=False),
@@ -109,30 +101,15 @@ silver_schema = DataFrameSchema({
     "is_complete_grouped": Column(bool, nullable=False),
 })
 
-def validate_silver_data(df) -> bool:
-    """Validate silver data quality."""
-    try:
-        silver_schema.validate(df, lazy=True)
-        print(f"Silver data validation passed. {df.shape}")
-        return True
-    except pa.errors.SchemaErrors as e:
-        logger.error(f"Silver data validation failed:\n{e.failure_cases}")
-        return False
-
 gold_schema = DataFrameSchema({
-    # Keys
     "id_municipio": Column(str, nullable=False),
     "ano": Column(int, nullable=False, checks=Check.isin([2017, 2019])),
-
-    # Original silver features
     "pib_per_capita": Column(float, nullable=True, checks=Check.ge(0)),
     "gasto_por_aluno": Column(float, nullable=True, checks=Check.ge(0)),
     "ideb_iniciais": Column(float, nullable=True, checks=Check.between(0, 10)),
     "ideb_finais": Column(float, nullable=True, checks=Check.between(0, 10)),
     "taxa_abandono_ef_anos_iniciais": Column(float, nullable=True, checks=Check.between(0, 100)),
     "taxa_abandono_ef_anos_finais": Column(float, nullable=True, checks=Check.between(0, 100)),
-
-    # DEA efficiency metrics
     "DEA_crs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_crs_output": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_vrs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
@@ -143,12 +120,44 @@ gold_schema = DataFrameSchema({
     "DEA_returns_nature": Column(str, nullable=True, checks=Check.isin(["Constante", "Crescente", "Decrescente"])),
 })
 
-def validate_gold_data(gold_df) -> bool:
-    """Validate silver data quality."""
-    try:
-        gold_schema.validate(gold_df, lazy=True)
-        print(f"Gold data validation passed. {gold_df.shape}")
-        return True
-    except pa.errors.SchemaErrors as e:
-        logger.error(f"Gold data validation failed:\n{e.failure_cases}")
-        return False
+def validate_data(
+                data: Union[pd.DataFrame, Dict[str, pd.DataFrame]],
+                schema_map: Dict[str, pa.DataFrameSchema] = None,
+                schema: pa.DataFrameSchema = None,
+                name: str = "dataset"
+) -> bool:
+    """
+    Validate either:
+      - a single DataFrame against a given schema
+      - a dict of DataFrames against schema_map
+    """
+    if isinstance(data, dict):
+        all_valid = True
+        for name, df in data.items():
+            if df is None:
+                logger.warning(f"{name} DataFrame is None, skipping.")
+                continue
+            if schema_map and name in schema_map:
+                try:
+                    schema_map[name].validate(df, lazy=True)
+                    print(f"{name} validation passed. Shape: {df.shape}")
+                except pa.errors.SchemaErrors as e:
+                    logger.error(f"{name} validation failed:\n{e.failure_cases}")
+                    all_valid = False
+            else:
+                logger.warning(f"No schema defined for {name}, skipping.")
+        return all_valid
+
+    elif isinstance(data, pd.DataFrame):
+        if schema is None:
+            raise ValueError("A schema must be provided for single DataFrame validation")
+        try:
+            schema.validate(data, lazy=True)
+            print(f"{name} validation passed. Shape: {data.shape}")
+            return True
+        except pa.errors.SchemaErrors as e:
+            logger.error(f"{name} validation failed:\n{e.failure_cases}")
+            return False
+
+    else:
+        raise TypeError("data must be either a DataFrame or a dict of DataFrames")

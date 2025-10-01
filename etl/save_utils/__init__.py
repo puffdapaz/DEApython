@@ -1,7 +1,5 @@
-# save_utils/__init__.py
+from .save import save_data, save_data_to_gcs
 
-from .save import save_dataframe, save_dataframe_to_gcs
-
-__all__ = ["save_dataframe",
-           "save_dataframe_to_gcs"
+__all__ = ["save_data",
+           "save_data_to_gcs"
 ]

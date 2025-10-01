@@ -7,8 +7,9 @@ from .save_utils import save as save
 from dealib import RTS, Orientation, dea
 from pathlib import Path
 from dotenv import load_dotenv
-from .diagnostics.data_validation import validate_gold_data
+from .diagnostics.data_validation import gold_schema, validate_data
 from .diagnostics import model_diagnostics as md
+from typing import Optional
 
 # Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -63,7 +64,7 @@ def perform_dea_analysis() -> pd.DataFrame:
         return X, Y
 
     for year, subset in df_complete.groupby("ano"):
-        print(f"Running DEA for year {year}")
+        print(f"Running DEA for {year}")
         X, Y = prepare_matrices(subset)
 
         dea_models = {
@@ -78,15 +79,11 @@ def perform_dea_analysis() -> pd.DataFrame:
         eff_scores = dea_models.copy()
         eff_scores["scale_efficiency"] = eff_scores["crs_input"] / eff_scores["vrs_input"]
 
-        returns_nature = []
-        for i in range(len(eff_scores["crs_input"])):
-            if eff_scores["crs_input"][i] == eff_scores["vrs_input"][i]:
-                returns_nature.append("Constante")
-            elif eff_scores["drs_input"][i] == eff_scores["vrs_input"][i]:
-                returns_nature.append("Decrescente")
-            else:
-                returns_nature.append("Crescente")
-        eff_scores["returns_nature"] = returns_nature
+        returns_nature = np.where(
+            eff_scores["crs_input"] == eff_scores["vrs_input"], "Constante",
+            np.where(eff_scores["drs_input"] == eff_scores["vrs_input"], "Decrescente", "Crescente")
+        )
+        eff_scores["returns_nature"] = returns_nature.tolist()
 
         result_df = subset.copy()
         for k, v in eff_scores.items():
@@ -109,33 +106,38 @@ def perform_dea_analysis() -> pd.DataFrame:
 
     return gold_df
 
-def process_gold_data() -> pd.DataFrame:
-
-    layer, paths = load_configs()
-  
-    # Set up Base dos Dados
-    bucket_name = setup_basedosdados()
-
-    gold_df = perform_dea_analysis()
-
-    # Validate data
-    if not validate_gold_data(gold_df):
-        raise ValueError("Gold data validation failed")
-
-    # Data diagnostics
-    md.analyze_gold_data(gold_df)
-    md.run_diagnostics(gold_df, log=True)
-
-    # Save single Gold file
-    local_path = Path(paths["paths"]["gold"])
-    layer = paths["layers"]["gold"]
-    local_path.mkdir(parents=True, exist_ok=True)
+def process_gold_data() -> Optional[pd.DataFrame]:
+    try:
+        dea_config, paths = load_configs()
     
-    save.save_dataframe(gold_df, "gold_data", directory=local_path)
-    save.save_dataframe_to_gcs(gold_df, "gold_data", bucket_name, layer=layer)
+        # Set up Base dos Dados
+        bucket_name = setup_basedosdados()
 
-    logger.info(f"Modeling finished. Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
-    return gold_df
+        gold_df = perform_dea_analysis()
+
+        # Validate data
+        if not validate_data(gold_df, schema=gold_schema, name="Gold"):
+            raise ValueError("Gold data validation failed")
+
+        # Data diagnostics
+        md.analyze_data(gold_df, name="Gold")
+        md.run_diagnostics(gold_df, log=True)
+
+        # Save single Gold file
+        local_path = Path(paths["paths"]["gold"])
+        layer = paths["layers"]["gold"]
+        local_path.mkdir(parents=True, exist_ok=True)
+        
+        save.save_data(gold_df, "gold_data", directory=local_path)
+        save.save_data_to_gcs(gold_df, "gold_data", bucket_name, layer=layer)
+
+        print(f"Modeling completed")
+        logger.info(f"Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
+        return gold_df
+
+    except Exception as e:
+            logger.error(f"Modeling failed: {e}")
+            return None
 
 if __name__ == "__main__":
     gold_df = process_gold_data()
