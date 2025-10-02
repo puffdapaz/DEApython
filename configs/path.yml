@@ -1,4 +1,3 @@
-# Paths for data ingestion and outputs
 paths:
   root: "data"
   bronze: "data/raw"

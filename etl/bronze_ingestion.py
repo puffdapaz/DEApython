@@ -1,40 +1,35 @@
-import basedosdados as bd
 import os
 import yaml
 import logging
-from .save_utils import save as save
-from typing import Dict, Optional
+import basedosdados as bd
+from typing import Dict
 from pathlib import Path
 from dotenv import load_dotenv
+from .save_utils import save as save
 from .diagnostics.data_validation import schemas, validate_data
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def load_configs() -> tuple:
-    """Load configurations from YAML files."""
+def load_configs() -> dict:
+    """Load configuration from path.yml"""
     try:
-        with open("configs/dea_config.yml", "r") as f:
-            dea_config = yaml.safe_load(f)
         with open("configs/path.yml", "r") as f:
             paths = yaml.safe_load(f)
-        return dea_config, paths
-    except FileNotFoundError as e:
-        logger.error(f"Configuration file not found: {e}")
-        raise
-    except yaml.YAMLError as e:
-        logger.error(f"Error parsing YAML config: {e}")
+        return paths
+    except Exception as e:
+        logger.error(f"Error loading configs: {e}")
         raise
 
-def setup_basedosdados() -> str:
-    """Set up Base dos Dados configuration and return bucket name."""
+def setup_gcp_bd() -> str:
+    """GCP credentials configuration to access Base dos Dados."""
     load_dotenv()
     billing_project_id = os.getenv("billing_project_id")
     bucket_name = os.getenv("gcp_bucket_name")
     
     if not billing_project_id or not bucket_name:
-        raise ValueError("Missing required environment variables: billing_project_id or gcp_bucket_name")
+        raise ValueError("Missing required environment variables")
     
     bd.config.billing_project_id = billing_project_id
     
@@ -67,11 +62,8 @@ def bronze_ingestion():
     """Main function for bronze layer data ingestion."""
     try:
         # Load configurations
-        dea_config, paths = load_configs()
-        
-        # Set up Base dos Dados
-        bucket_name = setup_basedosdados()
-        
+        paths = load_configs()
+        bucket_name = setup_gcp_bd()
         # Load queries directly from config
         queries = load_bronze_data("bronze")
         
@@ -99,8 +91,13 @@ def bronze_ingestion():
         for filename, df in dataframes.items():
             if df is not None:
                 try:
-                    save.save_data(df, f"bronze_{filename}", directory=local_path)
-                    save.save_data_to_gcs(df, f"bronze_{filename}", bucket_name, layer=layer)
+                    save.save_data(df,
+                                   f"bronze_{filename}",
+                                   directory=local_path)
+                    save.save_data_to_gcs(df,
+                                          f"bronze_{filename}",
+                                          bucket_name,
+                                          layer=layer)
                 except Exception as e:
                     logger.error(f"Error saving {filename}: {e}")
         

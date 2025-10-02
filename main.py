@@ -1,20 +1,16 @@
-
 from etl.bronze_ingestion import bronze_ingestion
 from etl import silver_processing
 from etl import gold_etl
 
-"""
-Entrypoint for DEApython project.
-Runs the complete ETL pipeline:
-1. Process bronze, silver, gold data
-2. Run DEA analysis
-3. Save results
-"""
-
 def main():
-    """Main pipeline execution function"""
-    print(".:.Starting DEApython Pipeline.:.")
-    
+    """
+    Entrypoint for DEApython project.
+    Runs the complete ETL pipeline:
+    1. Process data at bronze ingestion, silver processing and gold modeling
+    2. Run statistical diagnostics
+    3. Save results locally and to GCP
+    """
+    print(".:.Starting DEApython pipeline.:.")
     try:
         # Step 1: Bronze Ingestion
         print("Ingesting data...")
@@ -28,8 +24,7 @@ def main():
         print("Applying model...")
         gold_etl.process_gold_data()
 
-        print("DEApython workflow completed!")
-        
+        print("DEApython pipeline finished!")
     except Exception as e:
         print(f"Pipeline failed: {e}")
         raise

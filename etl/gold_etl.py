@@ -3,35 +3,30 @@ import yaml
 import logging
 import pandas as pd
 import numpy as np
-from .save_utils import save as save
-from dealib import RTS, Orientation, dea
 from pathlib import Path
+from typing import Optional
 from dotenv import load_dotenv
+from dealib import RTS, Orientation, dea
 from .diagnostics.data_validation import gold_schema, validate_data
 from .diagnostics import model_diagnostics as md
-from typing import Optional
+from .save_utils import save as save
 
 # Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-def load_configs() -> tuple:
-    """Load configurations from YAML files."""
+def load_configs() -> dict:
+    """Load configuration from path.yml"""
     try:
-        with open("configs/dea_config.yml", "r") as f:
-            dea_config = yaml.safe_load(f)
         with open("configs/path.yml", "r") as f:
             paths = yaml.safe_load(f)
-        return dea_config, paths
-    except FileNotFoundError as e:
-        logger.error(f"Configuration file not found: {e}")
-        raise
-    except yaml.YAMLError as e:
-        logger.error(f"Error parsing YAML config: {e}")
+        return paths
+    except Exception as e:
+        logger.error(f"Error loading configs: {e}")
         raise
 
-def setup_basedosdados() -> str:
-    """Set up Base dos Dados configuration and return bucket name."""
+def setup_gcp_bd() -> str:
+    """GCP credentials configuration to access Base dos Dados."""
     load_dotenv()
     billing_project_id = os.getenv("billing_project_id")
     bucket_name = os.getenv("gcp_bucket_name")
@@ -56,11 +51,15 @@ def perform_dea_analysis() -> pd.DataFrame:
 
     # 3. DEA per year
     def prepare_matrices(subset):
-        X = subset[["pib_per_capita", "gasto_por_aluno"]].to_numpy()
-        y_ideb = subset[["ideb_iniciais", "ideb_finais"]].to_numpy()
+        X = subset[["pib_per_capita",
+                    "gasto_por_aluno"]].to_numpy()
+        y_ideb = subset[["ideb_iniciais",
+                         "ideb_finais"]].to_numpy()
         abandono_iniciais = (100 - subset["taxa_abandono_ef_anos_iniciais"]).to_numpy().reshape(-1, 1)
         abandono_finais = (100 - subset["taxa_abandono_ef_anos_finais"]).to_numpy().reshape(-1, 1)
-        Y = np.hstack([y_ideb, abandono_iniciais, abandono_finais])
+        Y = np.hstack([y_ideb,
+                       abandono_iniciais,
+                       abandono_finais])
         return X, Y
 
     for year, subset in df_complete.groupby("ano"):
@@ -108,29 +107,33 @@ def perform_dea_analysis() -> pd.DataFrame:
 
 def process_gold_data() -> Optional[pd.DataFrame]:
     try:
-        dea_config, paths = load_configs()
-    
-        # Set up Base dos Dados
-        bucket_name = setup_basedosdados()
-
+        paths = load_configs()
+        bucket_name = setup_gcp_bd()
         gold_df = perform_dea_analysis()
-
         # Validate data
-        if not validate_data(gold_df, schema=gold_schema, name="Gold"):
+        if not validate_data(gold_df,
+                             schema=gold_schema,
+                             name="Gold"):
             raise ValueError("Gold data validation failed")
-
         # Data diagnostics
-        md.analyze_data(gold_df, name="Gold")
-        md.run_diagnostics(gold_df, log=True)
+        md.analyze_data(gold_df,
+                        name="Gold")
+        md.run_diagnostics(gold_df,
+                           log=True)
 
         # Save single Gold file
         local_path = Path(paths["paths"]["gold"])
         layer = paths["layers"]["gold"]
-        local_path.mkdir(parents=True, exist_ok=True)
+        local_path.mkdir(parents=True,
+                         exist_ok=True)
         
-        save.save_data(gold_df, "gold_data", directory=local_path)
-        save.save_data_to_gcs(gold_df, "gold_data", bucket_name, layer=layer)
-
+        save.save_data(gold_df,
+                       "gold_data",
+                       directory=local_path)
+        save.save_data_to_gcs(gold_df,
+                              "gold_data",
+                              bucket_name,
+                              layer=layer)
         print(f"Modeling completed")
         logger.info(f"Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
         return gold_df

@@ -1,37 +1,14 @@
 import pandas as pd
 import pandera as pa
-from pandera import Column, DataFrameSchema, Check
+import logging
 import yaml
 from typing import Union, Dict
-import logging
+from pandera import Column, DataFrameSchema, Check
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def load_configs() -> tuple:
-    """Load configurations from YAML files with proper type hints"""
-    config_files = {
-        "dea_config": "configs/dea_config.yml",
-        "paths": "configs/path.yml"
-    }
-    configs = {}
-    
-    for name, filepath in config_files.items():
-        try:
-            with open(filepath, "r") as f:
-                configs[name] = yaml.safe_load(f)
-        except FileNotFoundError as e:
-            logger.error(f"Configuration file not found: {filepath}")
-            raise
-        except yaml.YAMLError as e:
-            logger.error(f"Error parsing YAML config {filepath}: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"Unexpected error loading {filepath}: {e}")
-            raise
-    return configs["dea_config"], configs["paths"]
-
-# Define schemas for bronze datasets
+# Schemas for bronze datasets
 population_schema = DataFrameSchema({
     "id_municipio": Column(str),
     "sigla_uf": Column(str, nullable=True),
@@ -124,8 +101,7 @@ def validate_data(
                 data: Union[pd.DataFrame, Dict[str, pd.DataFrame]],
                 schema_map: Dict[str, pa.DataFrameSchema] = None,
                 schema: pa.DataFrameSchema = None,
-                name: str = "dataset"
-) -> bool:
+                name: str = "dataset") -> bool:
     """
     Validate either:
       - a single DataFrame against a given schema
@@ -158,6 +134,5 @@ def validate_data(
         except pa.errors.SchemaErrors as e:
             logger.error(f"{name} validation failed:\n{e.failure_cases}")
             return False
-
     else:
         raise TypeError("data must be either a DataFrame or a dict of DataFrames")

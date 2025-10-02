@@ -1,25 +1,35 @@
 import os
+import logging
 import pandas as pd
 import numpy as np
+import yaml
 from scipy import stats
-import logging
-from typing import Dict, Any
 from pathlib import Path
+from typing import Dict, Any
 from dotenv import load_dotenv
 from ..save_utils import save_data, save_data_to_gcs
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def setup_basedosdados() -> str:
-    """Set up Base dos Dados configuration and return bucket name."""
+def load_configs() -> dict:
+    """Load configuration from path.yml"""
+    try:
+        with open("configs/path.yml", "r") as f:
+            paths = yaml.safe_load(f)
+        return paths
+    except Exception as e:
+        logger.error(f"Error loading configs: {e}")
+        raise
+
+def setup_gcp_bd() -> str:
+    """GCP credentials configuration to access Base dos Dados."""
     load_dotenv()
     billing_project_id = os.getenv("billing_project_id")
     bucket_name = os.getenv("gcp_bucket_name")
     
     if not billing_project_id or not bucket_name:
         raise ValueError("Missing required environment variables")
-    
     return bucket_name
 
 # ------------------
@@ -36,31 +46,6 @@ def analyze_data(df: pd.DataFrame, name: str) -> None:
         print(year, f"{name} records:", len(year_data))
         print("\n%s", year_data.describe().to_string())
         print("\n%s", year_data.corr(numeric_only=True).to_string())
-
-# def analyze_silver_data(df: pd.DataFrame) -> None:
-#     """Generate analysis of silver data."""
-#     if df is None:
-#         logger.warning("No DataFrame provided for analysis.")
-#         return
-#     print("Silver data Analysis:")
-#     for year in sorted(df['ano'].unique()):
-#         year_data = df[df['ano'] == year]
-#         print(f"Year {year}: {len(year_data)} records")
-#         print("\n%s", year_data.describe().to_string())
-#         print("\n%s", year_data.corr(numeric_only=True).to_string())
-
-
-# def analyze_gold_data(gold_df: pd.DataFrame) -> None:
-#     """Generate analysis of gold data."""
-#     if gold_df is None:
-#         logger.warning("No DataFrame provided for analysis.")
-#         return
-#     print("Gold data Analysis:")
-#     for year in sorted(gold_df['ano'].unique()):
-#         year_data = gold_df[gold_df['ano'] == year]
-#         print(f"Year {year}: {len(year_data)} records")
-#         print("\n%s", year_data.describe().to_string())
-#         print("\n%s", year_data.corr(numeric_only=True).to_string())
 
 # ------------------
 # Statistical Tests
@@ -173,24 +158,38 @@ def run_diagnostics(gold_df: pd.DataFrame, *, log: bool = True, alpha: float = 0
         if log:
             log_test_results(f"Year {year}", year_tests)
 
-    # Combine descriptive/corr into a single DataFrame
     diagnostics_summary_df = pd.concat(diagnostics_summary, ignore_index=True)
 
     # Save files locally & GCS
-    bucket_name = setup_basedosdados()
-    local_path = Path("data/processed/gold")
-    local_path.mkdir(parents=True, exist_ok=True)
+    paths = load_configs()
+    bucket_name = setup_gcp_bd()
+    local_path = Path(paths["paths"]["gold"])
+    layer = paths["layers"]["gold"]
+    local_path.mkdir(parents=True,
+                     exist_ok=True)
 
     # 1. Statistical tests → JSON
-    save_data(diagnostics_tests, "diagnostics_tests", directory=local_path, file_format="json")
-    save_data_to_gcs(diagnostics_tests, "diagnostics_tests", bucket_name, layer="gold", file_format="json")
+    save_data(diagnostics_tests,
+              "diagnostics_tests",
+              directory=local_path,
+              file_format="json")
+    save_data_to_gcs(diagnostics_tests,
+                     "diagnostics_tests",
+                     bucket_name,
+                     layer=layer,
+                     file_format="json")
 
     # 2. Describe + correlation → Parquet
-    save_data(diagnostics_summary_df, "diagnostics_summary", directory=local_path, file_format="parquet")
-    save_data_to_gcs(diagnostics_summary_df, "diagnostics_summary", bucket_name, layer="gold", file_format="parquet")
-
+    save_data(diagnostics_summary_df,
+              "diagnostics_summary",
+              directory=local_path,
+              file_format="parquet")
+    save_data_to_gcs(diagnostics_summary_df,
+                     "diagnostics_summary",
+                     bucket_name,
+                     layer=layer,
+                     file_format="parquet")
     return diagnostics_tests, diagnostics_summary_df
-
 
 def log_test_results(test_name: str, results, indent: int = 0):
     """Nicely format and log a single test result (handles nested dicts)."""
@@ -209,6 +208,5 @@ def log_test_results(test_name: str, results, indent: int = 0):
     else:
         # handle strings or other single values
         print(f"{prefix}   {results}")
-
     if indent == 0:
         print("-" * 40)
