@@ -1,3 +1,8 @@
+"""
+Silver Layer Data Processing Workflow
+This module handles and saves ETL data to
+both local storage and Google Cloud Storage.
+"""
 import os
 import yaml
 import logging
@@ -15,7 +20,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 def load_configs() -> dict:
-    """Load configuration from path.yml"""
+    """
+    Load path configuration from YAML file.
+    Returns:
+        Dict containing path configurations for different data layers
+    Raises:
+        Exception: For any other unexpected errors
+    """
     try:
         with open("configs/path.yml", "r") as f:
             paths = yaml.safe_load(f)
@@ -25,57 +36,117 @@ def load_configs() -> dict:
         raise
 
 def setup_gcp_bd() -> str:
-    """GCP credentials configuration to access Base dos Dados."""
+    """
+    Configure GCP environment for Base dos Dados access.
+    Returns:
+        str: GCS bucket name for data storage
+    Raises:
+        ValueError: If required environment variables are missing
+    """
     load_dotenv()
     billing_project_id = os.getenv("billing_project_id")
     bucket_name = os.getenv("gcp_bucket_name")
-    
     if not billing_project_id or not bucket_name:
         raise ValueError("Missing required environment variables")
-    
     bd.config.billing_project_id = billing_project_id
-    
     return bucket_name
 
-def get_silver_query() -> str:
-    """Return the silver layer SQL query from configs/queries.yml."""
+def load_silver_data() -> str:
+    """
+    Load silver layer SQL query from configs/queries.yml.
+    Returns:
+        str: SQL query string.
+    Raises:
+        ValueError: If query is missing.
+    """
     try:
         with open("configs/queries.yml",
                   "r",
                   encoding="utf-8") as f:
             query = yaml.safe_load(f)
             return query["silver"]["query"]
-        if not query:
-            raise ValueError("No silver_query found in queries.yml")
-        return query
     except Exception as e:
         logger.error(f"Error loading silver_query: {e}")
         raise
 
 def add_completeness_flags(silver_df: pd.DataFrame, value_columns: List[str]) -> pd.DataFrame:
-    """Add municipality-level completeness flag across years."""
-
+    """
+    Add municipality-level completeness flag across years.
+    Args:
+        silver_df (pd.DataFrame): Silver layer DataFrame.
+        value_columns (List[str]): Columns to check for completeness.
+    Returns:
+        pd.DataFrame: Silver DataFrame with 'is_complete_grouped' flag.
+    """
     silver_df = silver_df.copy()
     tmp_flag = silver_df[value_columns].notnull().all(axis=1)
-
-    # Grouped completeness: all years must be complete
     silver_df['is_complete_grouped'] = (
         silver_df.assign(_tmp=tmp_flag)
           .groupby('id_municipio')['_tmp']
-          .transform(lambda x: x.all())
-    )
+          .transform(lambda x: x.all()))
     return silver_df
 
+def run_silver_query(query: str) -> pd.DataFrame:
+    """
+    Execute silver SQL query using Base dos Dados.
+    Args:
+        query (str): SQL query string.
+    Returns:
+        pd.DataFrame: Resulting DataFrame.
+    """
+    df = bd.read_sql(query)
+    return df
+
+def validate_silver(silver_df: pd.DataFrame) -> None:
+    """
+    Validate silver layer DataFrame against predefined schema.
+    Args:
+        dataframe (pd.DataFrame): 
+            DataFrame keyed by dataset name.
+    Raises:
+        ValueError: If validation fails for any DataFrame.
+    """
+    if not validate_data(silver_df,
+                             schema=silver_schema,
+                             name="Silver"):
+            raise ValueError("Silver data validation failed")       
+
+def save_silver(silver_df: pd.DataFrame,
+                paths: dict,
+                bucket: str) -> None:
+    """
+    Save silver DataFrame locally and to GCS.
+    Args:
+        silver_df (pd.DataFrame): Silver DataFrame.
+        paths (dict): Dictionary with local paths and layers.
+        bucket_name (str): GCP bucket name.
+    """
+    local_path = Path(paths["paths"]["silver"])
+    layer = paths["layers"]["silver"]
+    local_path.mkdir(parents=True,
+                     exist_ok=True)
+    save.save_data(silver_df,
+                   "silver_data",
+                   directory=local_path)
+    save.save_data_to_gcs(silver_df,
+                          "silver_data",
+                          bucket,
+                          layer=layer)
+    logger.info(f"Data saved at {local_path} and GCP://{bucket}/{layer} successfully")
+
 def process_silver_data() -> Optional[bd.Table]:
-    """Process silver layer data."""
+    """
+    Execute silver SQL query using Base dos Dados.
+    Args:
+        query (str): SQL query string.
+    Returns:
+        pd.DataFrame: Resulting DataFrame.
+    """
     try:
-        # Load configurations
         paths = load_configs()
         bucket_name = setup_gcp_bd()
-        # Get and execute query
-        query = get_silver_query()
-        silver_df = bd.read_sql(query)
-        
+        query = load_silver_data()
+        silver_df = run_silver_query(query)
         value_columns = [
         'populacao',
         'pib',
@@ -88,37 +159,18 @@ def process_silver_data() -> Optional[bd.Table]:
         'pib_per_capita',
         'gasto_por_aluno'
     ]
-
         silver_df = add_completeness_flags(silver_df, value_columns)
-        # Validate data
-        if not validate_data(silver_df,
-                             schema=silver_schema,
-                             name="Silver"):
-            raise ValueError("Silver data validation failed")
-        # Data diagnostics
+        validate_silver(silver_df)
         analyze_data(silver_df,
-                     name="Silver")
-
-        # Save data
-        local_path = Path(paths["paths"]["silver"])
-        layer = paths["layers"]["silver"]
-        local_path.mkdir(parents=True,
-                         exist_ok=True)
-        
-        save.save_data(silver_df,
-                       "silver_data",
-                       directory=local_path)
-        save.save_data_to_gcs(silver_df,
-                              "silver_data",
-                              bucket_name,
-                              layer=layer)
+                     name="silver")
+        save_silver(silver_df,
+                    paths,
+                    bucket_name)
         print(f"Processing completed")
-        logger.info(f"Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
         return silver_df
-        
     except Exception as e:
         logger.error(f"Processing failed: {e}")
-        return None
+        silver_df = None
 
 if __name__ == "__main__":
     silver_df = process_silver_data()

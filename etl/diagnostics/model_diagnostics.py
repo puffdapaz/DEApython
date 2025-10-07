@@ -40,7 +40,7 @@ def analyze_data(df: pd.DataFrame, name: str) -> None:
     if df is None:
         logger.warning(f"No DataFrame provided for {name} analysis.")
         return
-    print(f"{name} data Analysis:")
+    print(f"{name} data analysis:")
     for year in sorted(df['ano'].unique()):
         year_data = df[df['ano'] == year]
         print(year, f"{name} records:", len(year_data))

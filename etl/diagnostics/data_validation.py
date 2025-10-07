@@ -1,7 +1,6 @@
 import pandas as pd
 import pandera as pa
 import logging
-import yaml
 from typing import Union, Dict
 from pandera import Column, DataFrameSchema, Check
 

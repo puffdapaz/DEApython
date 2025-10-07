@@ -8,7 +8,3 @@ layers:
   bronze: "bronze"
   silver: "silver"
   gold: "gold"
-
-buckets:
-  default: "your-bucket"
-

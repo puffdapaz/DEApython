@@ -1,6 +1,6 @@
-from etl.bronze_ingestion import bronze_ingestion
+from etl import bronze_ingestion
 from etl import silver_processing
-from etl import gold_etl
+from etl import gold_modeling
 
 def main():
     """
@@ -14,7 +14,7 @@ def main():
     try:
         # Step 1: Bronze Ingestion
         print("Ingesting data...")
-        bronze_ingestion()
+        bronze_ingestion.ingest_bronze_data()
         
         # Step 2: Silver Processing
         print("Processing data...")
@@ -22,7 +22,7 @@ def main():
         
         # Step 3: Gold DEA Model
         print("Applying model...")
-        gold_etl.process_gold_data()
+        gold_modeling.model_gold_data()
 
         print("DEApython pipeline finished!")
     except Exception as e:
