@@ -8,7 +8,7 @@ def main():
     Runs the complete ETL pipeline:
     1. Process data at bronze ingestion, silver processing and gold modeling
     2. Run statistical diagnostics
-    3. Save results locally and to GCP
+    3. Save results locally and to GCP in Medallion architecture
     """
     print(".:.Starting DEApython pipeline.:.")
     try:

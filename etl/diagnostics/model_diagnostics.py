@@ -1,3 +1,7 @@
+"""
+Statistical tests, descriptive analysis, and diagnostic
+reporting for Data Envelopment Analysis (DEA) results and education metrics.
+"""
 import os
 import logging
 import pandas as pd
@@ -12,31 +16,54 @@ from ..save_utils import save_data, save_data_to_gcs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def load_configs() -> dict:
-    """Load configuration from path.yml"""
+# ---------------------------------------------------------------------
+# Config Loading
+# ---------------------------------------------------------------------
+def load_configs(config_path: str = "configs/path.yml") -> dict:
+    """
+    Load YAML configuration for paths and layers.
+    Args:
+        config_path: Path to the YAML configuration file
+    Returns:
+        Dict containing configuration parameters
+    Raises:
+        Exception: For other unexpected errors during file reading
+    """
     try:
-        with open("configs/path.yml", "r") as f:
-            paths = yaml.safe_load(f)
-        return paths
+        with open(config_path, "r") as f:
+            return yaml.safe_load(f)
     except Exception as e:
         logger.error(f"Error loading configs: {e}")
         raise
 
 def setup_gcp_bd() -> str:
-    """GCP credentials configuration to access Base dos Dados."""
+    """
+    Configure GCP credentials and retrieve bucket name from environment variables.
+    Returns:
+        str: GCP bucket name for data storage
+    Raises:
+        ValueError: If required environment variables are missing
+    """
     load_dotenv()
     billing_project_id = os.getenv("billing_project_id")
     bucket_name = os.getenv("gcp_bucket_name")
-    
     if not billing_project_id or not bucket_name:
         raise ValueError("Missing required environment variables")
     return bucket_name
 
-# ------------------
+# ---------------------------------------------------------------------
 # Descriptive Analysis
-# ------------------
-
-def analyze_data(df: pd.DataFrame, name: str) -> None:
+# ---------------------------------------------------------------------
+def analyze_data(df: pd.DataFrame,
+                 name: str) -> None:
+    """
+    Perform comprehensive descriptive analysis on a DataFrame.
+    Generates summary statistics and correlation matrices for each year
+    in the dataset and prints formatted results.
+    Args:
+        df: DataFrame to analyze
+        dataset_name: Name of the dataset for reporting
+    """
     if df is None:
         logger.warning(f"No DataFrame provided for {name} analysis.")
         return
@@ -47,15 +74,30 @@ def analyze_data(df: pd.DataFrame, name: str) -> None:
         print("\n%s", year_data.describe().to_string())
         print("\n%s", year_data.corr(numeric_only=True).to_string())
 
-# ------------------
+# ---------------------------------------------------------------------
 # Statistical Tests
-# ------------------
-
-def shapiro_wilk_function(efficiency_scores: np.ndarray, alpha: float = 0.05) -> Dict[str, Any]:
-    """Shapiro-Wilk test for normality"""
+# ---------------------------------------------------------------------
+def shapiro_wilk_function(efficiency_scores: np.ndarray,
+                          alpha: float = 0.05) -> Dict[str, Any]:
+    """
+    Perform Shapiro-Wilk test for normality on efficiency scores.
+    Args:
+        efficiency_scores: Array of efficiency scores to test
+        alpha: Significance level for hypothesis test
+    Returns:
+        Dict containing test results with keys:
+        - test: Test name
+        - statistic: Test statistic
+        - p_value: P-value
+        - alpha: Significance level used
+        - reject_null: Boolean indicating if null hypothesis is rejected
+        - interpretation: Human-readable interpretation of results
+    Raises:
+        Exception: For other unexpected errors during file reading
+    """
     try:
         stat, p_value = stats.shapiro(efficiency_scores)
-        reject_null = p_value > alpha
+        reject_null = p_value < alpha
         return {
             "test": "Shapiro-Wilk",
             "statistic": float(stat),
@@ -68,8 +110,20 @@ def shapiro_wilk_function(efficiency_scores: np.ndarray, alpha: float = 0.05) ->
         logger.error(f"Shapiro-Wilk test failed: {e}")
         return {"error": str(e)}
 
-def kolmogorov_smirnov_function(sample1: np.ndarray, sample2: np.ndarray, alpha: float = 0.05) -> Dict[str, Any]:
-    """Two-sample KS test"""
+def kolmogorov_smirnov_function(sample1: np.ndarray,
+                                sample2: np.ndarray,
+                                alpha: float = 0.05) -> Dict[str, Any]:
+    """
+    Perform two-sample Kolmogorov-Smirnov test for distribution comparison.
+    Args:
+        sample1: First sample array
+        sample2: Second sample array  
+        alpha: Significance level for hypothesis test
+    Returns:
+        Dict containing test results with interpretation
+    Raises:
+        Exception: For other unexpected errors during file reading
+    """
     try:
         stat, p_value = stats.ks_2samp(sample1, sample2)
         reject_null = p_value < alpha
@@ -85,8 +139,18 @@ def kolmogorov_smirnov_function(sample1: np.ndarray, sample2: np.ndarray, alpha:
         logger.error(f"KS test failed: {e}")
         return {"error": str(e)}
 
-def scale_efficiency_function(scale_efficiencies: np.ndarray, alpha: float = 0.05) -> Dict[str, Any]:
-    """One-sample t-test against mean=1 (unchanged format)."""
+def scale_efficiency_function(scale_efficiencies: np.ndarray,
+                              alpha: float = 0.05) -> Dict[str, Any]:
+    """
+    Perform one-sample t-test to check if scale efficiency mean equals 1.
+    Args:
+        scale_efficiencies: Array of scale efficiency scores
+        alpha: Significance level for hypothesis test
+    Returns:
+        Dict containing test results with mean efficiency
+    Raises:
+        Exception: For other unexpected errors during file reading
+    """
     try:
         t_stat, p_value = stats.ttest_1samp(scale_efficiencies, 1.0)
         reject_null = p_value < alpha
@@ -103,16 +167,32 @@ def scale_efficiency_function(scale_efficiencies: np.ndarray, alpha: float = 0.0
         logger.error(f"Scale efficiency test failed: {e}")
         return {"error": str(e)}
 
-def run_diagnostics(gold_df: pd.DataFrame, *, log: bool = True, alpha: float = 0.05) -> tuple[dict, pd.DataFrame]:
+# ---------------------------------------------------------------------
+# Diagnostics Runner
+# ---------------------------------------------------------------------
+def run_diagnostics(gold_df: pd.DataFrame,
+                    *,
+                    log: bool = True,
+                    alpha: float = 0.05) -> tuple[dict, pd.DataFrame]:
+    """
+    Statistical diagnostics on gold-level DEA results.
+    Performs normality tests, distribution comparisons, and generates
+    summary statistics for each year in the dataset.
+    Args:
+        gold_df: Gold-level DataFrame with DEA results
+        log_results: Whether to log test results to console
+        alpha: Significance level for statistical tests
+    Returns:
+        Tuple containing:
+        - diagnostics_tests: Dictionary with all test results by year
+        - diagnostics_summary: DataFrame with descriptive statistics
+    """
     if gold_df is None:
         logger.warning("No gold_df provided to run_diagnostics")
         return {}
-
     gold_df = gold_df[gold_df["is_complete_grouped"] == True]
-
     diagnostics_tests = {}
     diagnostics_summary = []
-
     for year in sorted(gold_df['ano'].unique()):
         year_gold_df = gold_df[gold_df['ano'] == year]
         year_tests = {}
@@ -120,47 +200,34 @@ def run_diagnostics(gold_df: pd.DataFrame, *, log: bool = True, alpha: float = 0
         # Statistical tests
         year_tests["shapiro_scale_eff"] = shapiro_wilk_function(
             year_gold_df["DEA_scale_efficiency"].to_numpy(),
-            alpha=alpha
-        )
-        year_tests["ks_crs_vs_vrs"] = kolmogorov_smirnov_function(
-            year_gold_df["DEA_crs_input"].to_numpy(),
-            year_gold_df["DEA_vrs_input"].to_numpy(),
-            alpha=alpha
-        )
+            alpha=alpha)
         year_tests["scale_eff"] = scale_efficiency_function(
             year_gold_df["DEA_scale_efficiency"].to_numpy(),
-            alpha=alpha
-        )
+            alpha=alpha)
         year_tests["returns_to_scale"] = {
             "crs_vs_vrs": kolmogorov_smirnov_function(
                 year_gold_df["DEA_crs_input"].to_numpy(),
                 year_gold_df["DEA_vrs_input"].to_numpy(),
-                alpha=alpha
-            ),
+                alpha=alpha),
             "irs_vs_drs": kolmogorov_smirnov_function(
                 year_gold_df["DEA_irs_input"].to_numpy(),
                 year_gold_df["DEA_drs_input"].to_numpy(),
-                alpha=alpha
-            ),
+                alpha=alpha),
         }
-
         diagnostics_tests[year] = year_tests
 
-        # Descriptive + correlation
+        # Append descriptive + correlation
         desc = year_gold_df.describe().reset_index()
         desc['ano'] = year 
         diagnostics_summary.append(desc)
-
         corr = year_gold_df.corr(numeric_only=True).reset_index()
         corr['ano'] = year
         diagnostics_summary.append(corr)
-
         if log:
             log_test_results(f"Year {year}", year_tests)
-
     diagnostics_summary_df = pd.concat(diagnostics_summary, ignore_index=True)
 
-    # Save files locally & GCS
+    # Save outputs
     paths = load_configs()
     bucket_name = setup_gcp_bd()
     local_path = Path(paths["paths"]["gold"])
@@ -168,7 +235,7 @@ def run_diagnostics(gold_df: pd.DataFrame, *, log: bool = True, alpha: float = 0
     local_path.mkdir(parents=True,
                      exist_ok=True)
 
-    # 1. Statistical tests → JSON
+    # Statistical tests → JSON
     save_data(diagnostics_tests,
               "diagnostics_tests",
               directory=local_path,
@@ -178,8 +245,7 @@ def run_diagnostics(gold_df: pd.DataFrame, *, log: bool = True, alpha: float = 0
                      bucket_name,
                      layer=layer,
                      file_format="json")
-
-    # 2. Describe + correlation → Parquet
+    # Describe + correlation → Parquet
     save_data(diagnostics_summary_df,
               "diagnostics_summary",
               directory=local_path,
@@ -191,11 +257,21 @@ def run_diagnostics(gold_df: pd.DataFrame, *, log: bool = True, alpha: float = 0
                      file_format="parquet")
     return diagnostics_tests, diagnostics_summary_df
 
-def log_test_results(test_name: str, results, indent: int = 0):
-    """Nicely format and log a single test result (handles nested dicts)."""
+# ---------------------------------------------------------------------
+# Logging Utility
+# ---------------------------------------------------------------------
+def log_test_results(test_name: str,
+                     results,
+                     indent: int = 0):
+    """
+    Recursively format and log statistical test results in a readable tree structure.
+    Args:
+        test_name: Name of the test or result section
+        results: Dictionary containing test results (can be nested)
+        indent_level: Current indentation level for formatting.
+    """
     prefix = " " * indent
     print(f"{prefix}📊 {test_name} Results")
-
     if isinstance(results, dict):
         for k, v in results.items():
             if isinstance(v, dict):
@@ -206,7 +282,6 @@ def log_test_results(test_name: str, results, indent: int = 0):
                 else:
                     print(f"{prefix}   {k}: {v}")
     else:
-        # handle strings or other single values
         print(f"{prefix}   {results}")
     if indent == 0:
         print("-" * 40)

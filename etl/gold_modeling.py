@@ -20,22 +20,38 @@ from .save_utils import save as save
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-def load_configs() -> dict:
-    """Load configuration from path.yml"""
+# ---------------------------------------------------------------------
+# Config Loading
+# ---------------------------------------------------------------------
+def load_configs(config_path: str = "configs/path.yml") -> dict:
+    """
+    Load YAML configuration for paths and layers.
+    Args:
+        config_path: Path to the YAML configuration file
+    Returns:
+        Dict containing configuration parameters
+    Raises:
+        Exception: For other unexpected errors during file reading
+    """
     try:
-        with open("configs/path.yml", "r") as f:
-            paths = yaml.safe_load(f)
-        return paths
+        with open(config_path, "r") as f:
+            return yaml.safe_load(f)
     except Exception as e:
         logger.error(f"Error loading configs: {e}")
         raise
 
 def setup_gcp_bd() -> str:
-    """GCP credentials configuration to access Base dos Dados."""
+    """
+    Configure GCP environment for Base dos Dados access.
+    Sets up billing project ID and retrieves GCS bucket name from environment variables.
+    Returns:
+        str: GCS bucket name for data storage
+    Raises:
+        ValueError: If required environment variables are missing
+    """
     load_dotenv()
     billing_project_id = os.getenv("billing_project_id")
     bucket_name = os.getenv("gcp_bucket_name")
-    
     if not billing_project_id or not bucket_name:
         raise ValueError("Missing required environment variables")
     return bucket_name
@@ -44,26 +60,27 @@ def load_gold_data() -> pd.DataFrame:
     """
     Load processed silver data for DEA analysis
     Returns:
-        pd.DataFrame: Silver layer data with completeness flags
+        dataFrame: Silver layer data with completeness flags
     Raises:
-        ValueError: If data is missing.
+        Exception: For other unexpected errors
     """
     try:
         df_full = pd.read_parquet("data/processed/silver/silver_data.parquet")
-        if df_full.empty:
-            raise ValueError("Silver data file is empty")
         return df_full
     except Exception as e:
         logger.error("Error loading data: %s", e)
         raise
 
+# ---------------------------------------------------------------------
+# Data Transformation Functions
+# ---------------------------------------------------------------------
 def use_completeness_flags(df_full: pd.DataFrame) -> pd.DataFrame:
     """
     Filter dataset to use only complete cases for DEA analysis.
     Args:
         df_full: Silver DataFrame with completeness flags
     Returns:
-        DataFrame containing only complete cases
+        dataFrame containing only complete cases
     Raises:
         ValueError: If no complete cases are found
     """
@@ -80,7 +97,7 @@ def prepare_matrices(subset: pd.DataFrame)-> Tuple[np.ndarray, np.ndarray]:
     Returns:
         Tuple of (X, Y) where X is input matrix and Y is output matrix
     Raises:
-        ValueError: If required columns are missing from the data
+        Exception: For other unexpected errors
     """
     try:
         X = subset[["pib_per_capita",
@@ -90,17 +107,27 @@ def prepare_matrices(subset: pd.DataFrame)-> Tuple[np.ndarray, np.ndarray]:
         abandono_iniciais = (100 - subset["taxa_abandono_ef_anos_iniciais"]).to_numpy().reshape(-1, 1)
         abandono_finais = (100 - subset["taxa_abandono_ef_anos_finais"]).to_numpy().reshape(-1, 1)
         Y = np.hstack([y_ideb,
-                        abandono_iniciais,
-                        abandono_finais])
+                       abandono_iniciais,
+                       abandono_finais])
         return X, Y
     except Exception as e:
             logger.error("Error preparing DEA matrices: %s", e)
             raise
-    
-def run_dea_models(X: np.ndarray, Y: np.ndarray) -> Dict[str, np.ndarray]:
+
+# ---------------------------------------------------------------------
+# DEA Modeling Functions
+# ---------------------------------------------------------------------
+def run_dea_models(X: np.ndarray,
+                   Y: np.ndarray) -> Dict[str, np.ndarray]:
     """
-    Run DEA models with different returns-to-scale assumptions.
-    Return dict of numpy arrays (same order as rows in X/Y)
+    Run DEA models with multiple returns-to-scale (RTS) assumptions.
+    Args:
+        X (np.ndarray): Input matrix.
+        Y (np.ndarray): Output matrix.
+    Returns:
+        Dict[str, np.ndarray]: Efficiency scores by model specification.
+    Raises:
+        Exception: For other unexpected errors
     """
     dea_results = {}
     try:
@@ -115,10 +142,17 @@ def run_dea_models(X: np.ndarray, Y: np.ndarray) -> Dict[str, np.ndarray]:
         logger.error("Error running DEA models: %s", e)
         raise
 
-def additional_derived_metrics(subset: pd.DataFrame, dea_results: Dict[str, np.ndarray]) -> pd.DataFrame:
+def additional_derived_metrics(subset: pd.DataFrame,
+                               dea_results: Dict[str, np.ndarray]) -> pd.DataFrame:
     """
-    Calculate derived year subset DEA metrics from base efficiency scores
-    return a DataFrame equal to subset with DEA_* columns added.
+    Add derived DEA metrics and scale efficiency to the dataset.
+    Args:
+        subset dataframe: Input DataFrame.
+        dea_results (Dict[str, np.ndarray]): Dictionary of efficiency scores.
+    Returns:
+        dataframe: DataFrame with added DEA_* columns.
+    Raises:
+        Exception: For other unexpected errors
     """
     try:
         result_df = subset.copy()
@@ -128,14 +162,9 @@ def additional_derived_metrics(subset: pd.DataFrame, dea_results: Dict[str, np.n
         returns_nature = np.where(
             eff["crs_input"] == eff["vrs_input"], "Constante",
             np.where(eff["drs_input"] == eff["vrs_input"], "Decrescente", "Crescente"))
-
-        # attach arrays as new columns, prefixing with DEA_
         for k, arr in eff.items():
-            # arr must be same length as result_df
             result_df[f"DEA_{k}"] = arr
-
         result_df["DEA_returns_nature"] = returns_nature
-
         return result_df
     except Exception as e:
         logger.error("Error calculating derived metrics: %s", e)
@@ -144,19 +173,18 @@ def additional_derived_metrics(subset: pd.DataFrame, dea_results: Dict[str, np.n
 def results_wrapper(df_full: pd.DataFrame,
                     dea_results: List[pd.DataFrame]) -> pd.DataFrame:
     """
-    Merge DEA results back into the full dataframe
+    Merge DEA results back into the full DataFrame.
+    Args:
+        df_full dataFrame: Full silver dataset.
+        dea_results dataFrame: DataFrame with DEA metrics.
+    Returns:
+        dataFrame: Enriched gold DataFrame.
+    Raises:
+        Exception: For other unexpected errors
     """
     try:
-        # dea_df = pd.concat(dea_results, ignore_index=True)
-        # gold_df = df_full.merge(
-        #     dea_df[["id_municipio", "ano"] + [c for c in dea_df.columns if c.startswith("DEA_")]],
-        #     on=["id_municipio", "ano"],
-        #     how="left")
-        # gold_df["id_municipio"] = gold_df["id_municipio"].astype("str")
-        # return gold_df
         dea_columns = [c for c in dea_results.columns if c.startswith("DEA_")]
         merge_cols = ["id_municipio", "ano"] + dea_columns
-
         gold_df = df_full.merge(
             dea_results[merge_cols],
             on=["id_municipio", "ano"],
@@ -169,18 +197,19 @@ def results_wrapper(df_full: pd.DataFrame,
 
 def run_gold_model(df_full: pd.DataFrame) -> List[pd.DataFrame]:
     """
-    Run DEA analysis grouped by year.
+    Run DEA analysis by year and return merged gold dataset.
     Args:
-        complete_cases: DataFrame containing only complete cases
+        df_full dataFrame: Full silver DataFrame.
     Returns:
-        List of DataFrames with DEA results for each year
+        dataFrame: Gold DataFrame with DEA results
+    Raises:
+        Exception: For other unexpected errors
     """
     df_complete = use_completeness_flags(df_full)
     results = []
     
     for year, year_data in df_complete.groupby("ano"):
         print(f"Running DEA for {year}")  
-
         try:
             X, Y = prepare_matrices(year_data)
             dea_results = run_dea_models(X, Y)
@@ -193,12 +222,14 @@ def run_gold_model(df_full: pd.DataFrame) -> List[pd.DataFrame]:
     gold_df = results_wrapper(df_full, results_df)
     return gold_df
 
+# ---------------------------------------------------------------------
+# Validation, Diagnostics & Saving
+# ---------------------------------------------------------------------
 def validate_gold(gold_df: pd.DataFrame) -> None:
     """
     Validate gold layer DataFrame against predefined schema.
     Args:
-        dataframe (pd.DataFrame): 
-            DataFrame keyed by dataset name.
+        dataframe dataFrame: DataFrame keyed by dataset name.
     Raises:
         ValueError: If validation fails for any DataFrame.
     """
@@ -209,7 +240,11 @@ def validate_gold(gold_df: pd.DataFrame) -> None:
 
 def run_diagnostics(gold_df: pd.DataFrame) -> None:
     """
-    Run comprehensive diagnostics on gold data
+    Run diagnostics and profiling on gold data.
+    Args:
+        gold_df dataFrame: Gold DataFrame.
+    Raises:
+        Exception: For other unexpected errors
     """
     try:
         md.analyze_data(gold_df,
@@ -226,9 +261,9 @@ def save_gold(gold_df: pd.DataFrame,
     """
     Save gold DataFrame and diagnostics locally and to GCS.
     Args:
-        gold_df (pd.DataFrame): Silver DataFrame.
-        paths (dict): Dictionary with local paths and layers.
-        bucket_name (str): GCP bucket name.
+        gold_df dataFrame: Silver DataFrame.
+        paths dict: Dictionary with local paths and layers.
+        bucket_name str: GCP bucket name.
     """
     local_path = Path(paths["paths"]["gold"])
     layer = paths["layers"]["gold"]
@@ -243,23 +278,33 @@ def save_gold(gold_df: pd.DataFrame,
                         layer=layer)
     logger.info(f"Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
 
+# ---------------------------------------------------------------------
+# Main Workflow Function
+# ---------------------------------------------------------------------
 def model_gold_data() -> Optional[pd.DataFrame]:
-        try:
-            paths = load_configs()
-            bucket_name = setup_gcp_bd()
+    """
+    Orchestrate gold layer data modeling workflow.
+    Returns:      
+        dataFrame: Resulting DataFrame, None otherwise
+    Raises:
+        Exception: If any critical step in the workflow fails
+    """
+    try:
+        paths = load_configs()
+        bucket_name = setup_gcp_bd()
 
-            df_full = load_gold_data()
-            gold_df = run_gold_model(df_full)
+        df_full = load_gold_data()
+        gold_df = run_gold_model(df_full)
 
-            validate_gold(gold_df)
-            run_diagnostics(gold_df)
+        validate_gold(gold_df)
+        run_diagnostics(gold_df)
 
-            save_gold(gold_df, paths, bucket_name)
-            print(f"Modeling completed")
-            return gold_df
-        except Exception as e:
-                logger.error(f"Modeling failed: {e}")
-                return None
+        save_gold(gold_df, paths, bucket_name)
+        print(f"Modeling completed")
+        return gold_df
+    except Exception as e:
+            logger.error(f"Modeling failed: {e}")
+            return None
 
 if __name__ == "__main__":
     gold_df = model_gold_data()

@@ -1,7 +1,8 @@
 """
-Bronze Layer Data Ingestion Workflow
-This module handles and saves the extraction of raw data
-to both local storage and Google Cloud Storage.
+Bronze Layer Data Ingestion Workflow.
+This module handles the extraction of raw data from Base dos Dados and saves
+to both local storage and Google Cloud Storage. It includes data validation
+and comprehensive error handling for reliable data ingestion.
 """
 import os
 import yaml
@@ -18,18 +19,22 @@ from .diagnostics.data_validation import schemas, validate_data
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def load_configs() -> dict:
+# ---------------------------------------------------------------------
+# Config Loading
+# ---------------------------------------------------------------------
+def load_configs(config_path: str = "configs/path.yml") -> dict:
     """
-    Load path configuration from YAML file.
+    Load YAML configuration for paths and layers.
+    Args:
+        config_path: Path to the YAML configuration file
     Returns:
-        Dict containing path configurations for different data layers
+        Dict containing configuration parameters
     Raises:
-        Exception: For any other unexpected errors
+        Exception: For other unexpected errors during file reading
     """
     try:
-        with open("configs/path.yml", "r") as f:
-            paths = yaml.safe_load(f)
-        return paths
+        with open(config_path, "r") as f:
+            return yaml.safe_load(f)
     except Exception as e:
         logger.error(f"Error loading configs: {e}")
         raise
@@ -37,6 +42,7 @@ def load_configs() -> dict:
 def setup_gcp_bd() -> str:
     """
     Configure GCP environment for Base dos Dados access.
+    Sets up billing project ID and retrieves GCS bucket name from environment variables.
     Returns:
         str: GCS bucket name for data storage
     Raises:
@@ -47,19 +53,22 @@ def setup_gcp_bd() -> str:
     bucket_name = os.getenv("gcp_bucket_name")
     if not billing_project_id or not bucket_name:
         raise ValueError("Missing required environment variables")
-    bd.config.billing_project_id = billing_project_id
     return bucket_name
 
 def load_bronze_data(layer: str = "bronze") -> Dict[str, str]:
     """
-    Load queries from YAML configuration file.
+    Load SQL queries from YAML configuration file for bronze layer.
     Args:
         layer: Bronze layer identifier
     Returns:
-        Dictionary of query names to SQL strings
+        Dictionary mapping query names to SQL query strings
+    Raises:
+        Exception: For other unexpected errors
     """
     try:
-        with open("configs/queries.yml", "r", encoding="utf-8") as f:
+        with open("configs/queries.yml",
+                  "r",
+                  encoding="utf-8") as f:
             all_queries = yaml.safe_load(f)
         layer_queries = all_queries.get(f"{layer}_queries", {})
         if not layer_queries:
@@ -70,16 +79,19 @@ def load_bronze_data(layer: str = "bronze") -> Dict[str, str]:
         logger.error(f"Unexpected error loading queries: {e}")
         raise
 
+# ---------------------------------------------------------------------
+# Data Ingestion Functions
+# ---------------------------------------------------------------------
 def run_bronze_query(queries: Dict[str, str]) -> Dict[str, pd.DataFrame]:
     """
-    Execute SQL queries and return results as DataFrames.
+    Execute SQL queries against Base dos Dados and return results as DataFrames.
     Args:
-        queries (Dict[str, str]): 
-            A dictionary mapping query names to SQL query strings.
+        queries: Dictionary mapping query names to SQL query strings
     Returns:
-        Dict[str, Optional[pd.DataFrame]]: 
-            A dictionary mapping query names to their resulting DataFrames. 
-            If a query fails, its value will be None.
+        Dictionary mapping query names to their resulting DataFrames.
+        Failed queries will have None as their value.
+    Raises:
+        Exception: For other unexpected errors.
     """
     dataframes = {}
     for name, query in queries.items():
@@ -92,12 +104,14 @@ def run_bronze_query(queries: Dict[str, str]) -> Dict[str, pd.DataFrame]:
             dataframes[name] = None
     return dataframes
 
+# ---------------------------------------------------------------------
+# Validation & Saving
+# --------------------------------------------------------------------
 def validate_bronze(dataframes: Dict[str, pd.DataFrame]) -> None:
     """
     Validate bronze layer DataFrames against predefined schemas.
     Args:
-        dataframes (Dict[str, Optional[pd.DataFrame]]): 
-            A dictionary of DataFrames keyed by dataset name.
+        dataframes: Dictionary of DataFrames keyed by dataset name
     Raises:
         ValueError: If validation fails for any DataFrame.
     """
@@ -114,23 +128,31 @@ def save_bronze(dataframes: Dict[str, pd.DataFrame],
         dataframes: Dictionary of DataFrames to save
         paths: Local directory path for storage
         bucket: GCS bucket name
+    Raises:
+        Exception: For other unexpected errors.
     """
-    local_path = Path(paths["paths"]["bronze"])
-    layer = paths["layers"]["bronze"]
-    local_path.mkdir(parents=True,
-                     exist_ok=True)
+    try:
+        local_path = Path(paths["paths"]["bronze"])
+        layer = paths["layers"]["bronze"]
+        local_path.mkdir(parents=True,
+                        exist_ok=True)
 
-    for name, df in dataframes.items():
-        if df is not None:
-            save.save_data(df,
-                           f"bronze_{name}",
-                           directory=local_path)
-            save.save_data_to_gcs(df,
-                                  f"bronze_{name}",
-                                  bucket,
-                                  layer=layer)
-            logger.info(f"Data saved at {local_path} and GCP://{bucket}/{layer} successfully")
+        for name, df in dataframes.items():
+            if df is not None:
+                save.save_data(df,
+                            f"bronze_{name}",
+                            directory=local_path)
+                save.save_data_to_gcs(df,
+                                    f"bronze_{name}",
+                                    bucket,
+                                    layer=layer)
+                logger.info(f"Data saved at {local_path} and GCP://{bucket}/{layer} successfully")
+    except Exception as e:
+                logger.error(f"Error saving {layer}: {e}")
 
+# ---------------------------------------------------------------------
+# Main Workflow Function
+# ---------------------------------------------------------------------
 def ingest_bronze_data() -> Dict[str, pd.DataFrame]:
     """
     Orchestrate bronze layer data ingestion workflow.
@@ -142,9 +164,12 @@ def ingest_bronze_data() -> Dict[str, pd.DataFrame]:
     try:
         paths = load_configs()
         bucket_name = setup_gcp_bd()
+
         queries = load_bronze_data("bronze")
         dataframes = run_bronze_query(queries)
+
         validate_bronze(dataframes)
+
         save_bronze(dataframes,
                     paths,
                     bucket_name)
