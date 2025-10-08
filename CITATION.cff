@@ -1,0 +1,36 @@
+cff-version: 1.1.0
+message: "If you use this software, please cite it using the following metadata. This project uses the Base dos Dados SDK."
+title: "DEApython"
+abstract: ""
+version: "1.0.0"
+authors:
+  - family-names: "Silva"
+    given-names: "Pedro"
+    orcid: "0009-0009-7166-844X"
+    email: "silvapedro@outlook.com"
+keywords: ["data-envelopment-analysis", "education", "efficiency", "brazil", "basedosdados"]
+license: MIT
+repository-code: "https://github.com/puffdapaz/DEApython"
+url: "https://github.com/puffdapaz/DEApython"
+doi: "10.5281/zenodo.17297450"
+date-released: "2025-12-31"
+
+references:
+  - type: software
+    authors:
+      - name: "Base dos Dados"
+    title: "Base dos Dados"
+    url: "https://basedosdados.org"
+    repository-code: "https://github.com/basedosdados/sdk"
+    license: MIT
+    license-url: "https://github.com/basedosdados/sdk/blob/master/LICENSE"
+
+preferred-citation:
+  type: software
+  authors:
+    - family-names: "Silva"
+      given-names: "Pedro"
+  title: "DEApython"
+  version: "1.0.0"
+  doi: "10.5281/zenodo.17297450"
+  date-released: "2025-12-31"
