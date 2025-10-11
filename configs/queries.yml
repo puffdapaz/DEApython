@@ -188,7 +188,11 @@ silver:
       CASE WHEN m.quantidade_matricula IS NOT NULL AND m.quantidade_matricula > 0 
         THEN ROUND(SAFE_CAST(ge.valor AS FLOAT64) / SAFE_CAST(m.quantidade_matricula AS FLOAT64), 2)
         ELSE NULL 
-    END AS gasto_por_aluno
+    END AS gasto_por_aluno,
+      CASE WHEN pb.pib IS NOT NULL AND pb.pib > 0
+        THEN ROUND((SAFE_CAST(ge.valor AS FLOAT64) / SAFE_CAST(pb.pib AS FLOAT64)) * 100, 2)
+        ELSE NULL
+    END AS educ_pct_gdp
     FROM populacao p
     LEFT JOIN pib pb ON p.id_municipio = pb.id_municipio AND p.ano = pb.ano
     LEFT JOIN name n ON p.id_municipio = n.id_municipio

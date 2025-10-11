@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Optional, Tuple, Dict, List
 from dotenv import load_dotenv
 from dealib import RTS, Orientation, dea
+from .dash_metrics import analytical_features
 from .diagnostics.data_validation import gold_schema, validate_data
 from .diagnostics import model_diagnostics as md
 from .save_utils import save as save
@@ -142,8 +143,8 @@ def run_dea_models(X: np.ndarray,
         logger.error("Error running DEA models: %s", e)
         raise
 
-def additional_derived_metrics(subset: pd.DataFrame,
-                               dea_results: Dict[str, np.ndarray]) -> pd.DataFrame:
+def derived_metrics(subset: pd.DataFrame,
+                    dea_results: Dict[str, np.ndarray]) -> pd.DataFrame:
     """
     Add derived DEA metrics and scale efficiency to the dataset.
     Args:
@@ -183,8 +184,7 @@ def results_wrapper(df_full: pd.DataFrame,
         Exception: For other unexpected errors
     """
     try:
-        dea_columns = [c for c in dea_results.columns if c.startswith("DEA_")]
-        merge_cols = ["id_municipio", "ano"] + dea_columns
+        merge_cols = [c for c in dea_results.columns if c not in df_full.columns] + ["id_municipio", "ano"]
         gold_df = df_full.merge(
             dea_results[merge_cols],
             on=["id_municipio", "ano"],
@@ -213,7 +213,7 @@ def run_gold_model(df_full: pd.DataFrame) -> List[pd.DataFrame]:
         try:
             X, Y = prepare_matrices(year_data)
             dea_results = run_dea_models(X, Y)
-            year_results = additional_derived_metrics(year_data, dea_results)
+            year_results = derived_metrics(year_data, dea_results)
             results.append(year_results)
         except Exception as e:
                 logger.error("DEA failed for year %d: %s", year, e)
@@ -295,6 +295,7 @@ def model_gold_data() -> Optional[pd.DataFrame]:
 
         df_full = load_gold_data()
         gold_df = run_gold_model(df_full)
+        gold_df = analytical_features(gold_df, df_full)
 
         validate_gold(gold_df)
         run_diagnostics(gold_df)

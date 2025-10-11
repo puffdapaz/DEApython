@@ -89,6 +89,7 @@ silver_schema = DataFrameSchema({
     "taxa_abandono_ef_anos_finais": Column(float, nullable=True, checks=Check.between(0, 100)),
     "pib_per_capita": Column(float, nullable=True, checks=Check.ge(0)),
     "gasto_por_aluno": Column(float, nullable=True, checks=Check.ge(0)),
+    "educ_pct_gdp": Column(float, nullable=True, checks=Check.between(0, 100)),
     "is_complete_grouped": Column(bool, nullable=False),
 })
 
@@ -104,6 +105,8 @@ gold_schema = DataFrameSchema({
     "ideb_finais": Column(float, nullable=True, checks=Check.between(0, 10)),
     "taxa_abandono_ef_anos_iniciais": Column(float, nullable=True, checks=Check.between(0, 100)),
     "taxa_abandono_ef_anos_finais": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "educ_pct_gdp": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "is_complete_grouped": Column(bool, nullable=False),
     "DEA_crs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_crs_output": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_vrs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
@@ -112,6 +115,16 @@ gold_schema = DataFrameSchema({
     "DEA_drs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_scale_efficiency": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_returns_nature": Column(str, nullable=True, checks=Check.isin(["Constante", "Crescente", "Decrescente"])),
+    "rank_vrs": Column(int, nullable=True, checks=Check.between(0, 100)),
+    "pct_var_vrs": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "pct_var_scale": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "category_vrs": Column(str, nullable=True, checks=Check.isin(["Inefficient", "Moderate", "Efficient"])),
+    "category_scale": Column(str, nullable=True, checks=Check.isin(["Inefficient", "Moderate", "Efficient"])),
+    "delta_vrs_median": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "delta_scale_median": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "state_avg_vrs": Column(float, nullable=True, checks=Check.between(0, 1)),
+    "state_avg_scale": Column(float, nullable=True, checks=Check.between(0, 1)),
+    "peer_group": Column(str, nullable=True, checks=Check.isin(["Small", "Medium", "Large", "Mega"]))
 })
 
 # ---------------------------------------------------------------------
