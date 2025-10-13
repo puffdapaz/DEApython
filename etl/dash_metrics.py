@@ -169,7 +169,7 @@ def analytical_features(df: pd.DataFrame,
         enriched = state_benchmarks(enriched, enriched)
         enriched = peer_groups(enriched)
 
-        print("Metrics added successfully")
+        logger.info("Metrics added successfully")
         return enriched
     except Exception as e:
         logger.error(f"Error in analytical_features: {e}")
