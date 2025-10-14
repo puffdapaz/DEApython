@@ -101,12 +101,12 @@ def prepare_matrices(subset: pd.DataFrame)-> Tuple[np.ndarray, np.ndarray]:
         Exception: For other unexpected errors
     """
     try:
-        X = subset[["pib_per_capita",
-                    "gasto_por_aluno"]].to_numpy()
-        y_ideb = subset[["ideb_iniciais",
-                            "ideb_finais"]].to_numpy()
-        abandono_iniciais = (100 - subset["taxa_abandono_ef_anos_iniciais"]).to_numpy().reshape(-1, 1)
-        abandono_finais = (100 - subset["taxa_abandono_ef_anos_finais"]).to_numpy().reshape(-1, 1)
+        X = subset[["gdp_per_capita",
+                    "spending_per_student"]].to_numpy()
+        y_ideb = subset[["ideb_initial_years",
+                            "ideb_final_years"]].to_numpy()
+        abandono_iniciais = (100 - subset["dropout_rates_initial_years"]).to_numpy().reshape(-1, 1)
+        abandono_finais = (100 - subset["dropout_rates_final_years"]).to_numpy().reshape(-1, 1)
         Y = np.hstack([y_ideb,
                        abandono_iniciais,
                        abandono_finais])
@@ -161,8 +161,8 @@ def derived_metrics(subset: pd.DataFrame,
         eff["scale_efficiency"] = eff["crs_input"] / eff["vrs_input"]
 
         returns_nature = np.where(
-            eff["crs_input"] == eff["vrs_input"], "Constante",
-            np.where(eff["drs_input"] == eff["vrs_input"], "Decrescente", "Crescente"))
+            eff["crs_input"] == eff["vrs_input"], "Constant",
+            np.where(eff["drs_input"] == eff["vrs_input"], "Decreasing", "Increasing"))
         for k, arr in eff.items():
             result_df[f"DEA_{k}"] = arr
         result_df["DEA_returns_nature"] = returns_nature
@@ -187,9 +187,9 @@ def results_wrapper(df_full: pd.DataFrame,
         merge_cols = [c for c in dea_results.columns if c not in df_full.columns] + ["id_municipio", "ano"]
         gold_df = df_full.merge(
             dea_results[merge_cols],
-            on=["id_municipio", "ano"],
+            on=["city_id", "year"],
             how="left")
-        gold_df["id_municipio"] = gold_df["id_municipio"].astype(str)
+        gold_df["city_id"] = gold_df["city_id"].astype(str)
         return gold_df
     except Exception as e:
         logger.error("Error merging DEA results: %s", e)

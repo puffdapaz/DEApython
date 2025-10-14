@@ -3,7 +3,7 @@ bronze_queries:
     SELECT id_municipio, sigla_uf, ano, populacao
     FROM `basedosdados.br_ibge_populacao.municipio`
     WHERE ano IN (2017, 2019)
-  pib: |
+  gdp: |
     SELECT id_municipio, ano, pib
     FROM `basedosdados.br_ibge_pib.municipio`
     WHERE ano IN (2017, 2019)
@@ -154,12 +154,12 @@ silver:
           WHEN SAFE_CAST(taxa_abandono_ef_anos_iniciais AS FLOAT64) IS NULL THEN NULL
           WHEN SAFE_CAST(taxa_abandono_ef_anos_iniciais AS FLOAT64) < 0 THEN NULL
           ELSE SAFE_CAST(taxa_abandono_ef_anos_iniciais AS FLOAT64)
-        END AS taxa_abandono_ef_anos_iniciais,
+        END AS dropout_rates_initial_years,
         CASE
           WHEN SAFE_CAST(taxa_abandono_ef_anos_finais AS FLOAT64) IS NULL THEN NULL
           WHEN SAFE_CAST(taxa_abandono_ef_anos_finais AS FLOAT64) < 0 THEN NULL
           ELSE SAFE_CAST(taxa_abandono_ef_anos_finais AS FLOAT64)
-        END AS taxa_abandono_ef_anos_finais
+        END AS dropout_rates_final_years
       FROM `basedosdados.br_inep_indicadores_educacionais.municipio`
       WHERE ano IN (2017, 2019)
         AND rede = "municipal"
@@ -168,27 +168,27 @@ silver:
 
     -- Final combined query
     SELECT 
-      p.id_municipio,
-      p.sigla_uf,
-      p.ano,
-      p.populacao,
-      n.nome,
-      pb.pib,
-      ge.valor AS gastos_educacao,
-      m.quantidade_matricula,
-      i.ideb_iniciais,
-      i.ideb_finais,
-      a.taxa_abandono_ef_anos_iniciais,
-      a.taxa_abandono_ef_anos_finais,
+      p.id_municipio AS city_id,
+      p.sigla_uf AS state,
+      p.ano AS year,
+      p.populacao AS population,
+      n.nome AS city_name,
+      pb.pib AS gdp,
+      ge.valor AS education_spending,
+      m.quantidade_matricula AS enrollments,
+      i.ideb_iniciais AS ideb_initial,
+      i.ideb_finais AS ideb_final,
+      a.dropout_rates_initial_years,
+      a.dropout_rates_final_years,
       -- Calculate derived metrics
       CASE WHEN p.populacao IS NOT NULL AND p.populacao > 0 
         THEN ROUND(SAFE_CAST(pb.pib AS FLOAT64) / SAFE_CAST(p.populacao AS FLOAT64), 2)
         ELSE NULL 
-    END AS pib_per_capita,
+    END AS gdp_per_capita,
       CASE WHEN m.quantidade_matricula IS NOT NULL AND m.quantidade_matricula > 0 
         THEN ROUND(SAFE_CAST(ge.valor AS FLOAT64) / SAFE_CAST(m.quantidade_matricula AS FLOAT64), 2)
         ELSE NULL 
-    END AS gasto_por_aluno,
+    END AS spending_per_student,
       CASE WHEN pb.pib IS NOT NULL AND pb.pib > 0
         THEN ROUND((SAFE_CAST(ge.valor AS FLOAT64) / SAFE_CAST(pb.pib AS FLOAT64)) * 100, 2)
         ELSE NULL

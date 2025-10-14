@@ -26,7 +26,7 @@ population_schema = DataFrameSchema({
     "populacao": Column(int, checks=Check.ge(0))
 })
 
-pib_schema = DataFrameSchema({
+gdp_schema = DataFrameSchema({
     "id_municipio": Column(str),
     "ano": Column(int, checks=Check.isin(VALID_YEARS)),
     "pib": Column(int, checks=Check.ge(0))
@@ -64,7 +64,7 @@ dropout_rates_schema = DataFrameSchema({
 # Dictionary of bronze schemas
 schemas = {
     "population": population_schema,
-    "pib": pib_schema,
+    "pib": gdp_schema,
     "education_spending": education_spending_schema,
     "enrollments": enrollments_schema,
     "ideb": ideb_schema,

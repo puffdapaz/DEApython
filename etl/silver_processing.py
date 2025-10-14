@@ -173,16 +173,16 @@ def process_silver_data() -> Optional[bd.Table]:
         query = load_silver_data()
         silver_df = run_silver_query(query)
         
-        value_columns = ['populacao',
-                         'pib',
-                         'gastos_educacao',
-                         'quantidade_matricula',
-                         'ideb_iniciais',
-                         'ideb_finais',
-                         'taxa_abandono_ef_anos_iniciais',
-                         'taxa_abandono_ef_anos_finais',
-                         'pib_per_capita',
-                         'gasto_por_aluno']
+        value_columns = ['population',
+                         'gpd',
+                         'education_spending',
+                         'enrollments',
+                         'ideb_initial_years',
+                         'ideb_final_years',
+                         'dropout_rates_initial_years',
+                         'dropout_rates_final_years',
+                         'gdp_per_capita',
+                         'spending_per_student']
         silver_df = add_completeness_flags(silver_df, value_columns)
 
         validate_silver(silver_df)
