@@ -68,8 +68,8 @@ def analyze_data(df: pd.DataFrame,
         logger.warning(f"No DataFrame provided for {name} analysis.")
         return
     print(f"{name} data analysis:")
-    for year in sorted(df['ano'].unique()):
-        year_data = df[df['ano'] == year]
+    for year in sorted(df['year'].unique()):
+        year_data = df[df['year'] == year]
         print(year, f"{name} records:", len(year_data))
         print("\n%s", year_data.describe().to_string())
         print("\n%s", year_data.corr(numeric_only=True).to_string())
@@ -193,8 +193,8 @@ def run_diagnostics(gold_df: pd.DataFrame,
     gold_df = gold_df[gold_df["is_complete_grouped"] == True]
     diagnostics_tests = {}
     diagnostics_summary = []
-    for year in sorted(gold_df['ano'].unique()):
-        year_gold_df = gold_df[gold_df['ano'] == year]
+    for year in sorted(gold_df['year'].unique()):
+        year_gold_df = gold_df[gold_df['year'] == year]
         year_tests = {}
 
         # Statistical tests
@@ -218,10 +218,10 @@ def run_diagnostics(gold_df: pd.DataFrame,
 
         # Append descriptive + correlation
         desc = year_gold_df.describe().reset_index()
-        desc['ano'] = year 
+        desc['year'] = year 
         diagnostics_summary.append(desc)
         corr = year_gold_df.corr(numeric_only=True).reset_index()
-        corr['ano'] = year
+        corr['year'] = year
         diagnostics_summary.append(corr)
         if log:
             log_test_results(f"Year {year}", year_tests)

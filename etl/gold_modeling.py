@@ -104,7 +104,7 @@ def prepare_matrices(subset: pd.DataFrame)-> Tuple[np.ndarray, np.ndarray]:
         X = subset[["gdp_per_capita",
                     "spending_per_student"]].to_numpy()
         y_ideb = subset[["ideb_initial_years",
-                            "ideb_final_years"]].to_numpy()
+                         "ideb_final_years"]].to_numpy()
         abandono_iniciais = (100 - subset["dropout_rates_initial_years"]).to_numpy().reshape(-1, 1)
         abandono_finais = (100 - subset["dropout_rates_final_years"]).to_numpy().reshape(-1, 1)
         Y = np.hstack([y_ideb,
@@ -184,10 +184,11 @@ def results_wrapper(df_full: pd.DataFrame,
         Exception: For other unexpected errors
     """
     try:
-        merge_cols = [c for c in dea_results.columns if c not in df_full.columns] + ["id_municipio", "ano"]
+        merge_cols = [c for c in dea_results.columns if c not in df_full.columns] + ["city_id", "year"]
         gold_df = df_full.merge(
             dea_results[merge_cols],
-            on=["city_id", "year"],
+            on=["city_id",
+                "year"],
             how="left")
         gold_df["city_id"] = gold_df["city_id"].astype(str)
         return gold_df
@@ -208,7 +209,7 @@ def run_gold_model(df_full: pd.DataFrame) -> List[pd.DataFrame]:
     df_complete = use_completeness_flags(df_full)
     results = []
     
-    for year, year_data in df_complete.groupby("ano"):
+    for year, year_data in df_complete.groupby("year"):
         print(f"Running DEA for {year}")  
         try:
             X, Y = prepare_matrices(year_data)
@@ -268,14 +269,14 @@ def save_gold(gold_df: pd.DataFrame,
     local_path = Path(paths["paths"]["gold"])
     layer = paths["layers"]["gold"]
     local_path.mkdir(parents=True,
-                    exist_ok=True)
+                     exist_ok=True)
     save.save_data(gold_df,
-                "gold_data",
-                directory=local_path)
+                   "gold_data",
+                   directory=local_path)
     save.save_data_to_gcs(gold_df,
-                        "gold_data",
-                        bucket_name,
-                        layer=layer)
+                          "gold_data",
+                          bucket_name,
+                          layer=layer)
     logger.info(f"Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
 
 # ---------------------------------------------------------------------
@@ -300,7 +301,9 @@ def model_gold_data() -> Optional[pd.DataFrame]:
         validate_gold(gold_df)
         run_diagnostics(gold_df)
 
-        save_gold(gold_df, paths, bucket_name)
+        save_gold(gold_df, 
+                  paths, 
+                  bucket_name)
         print(f"Modeling completed")
         return gold_df
     except Exception as e:

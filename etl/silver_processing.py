@@ -85,7 +85,7 @@ def run_silver_query(query: str) -> pd.DataFrame:
     """
     try:
         df = bd.read_sql(query,
-                        billing_project_id=os.getenv("billing_project_id"))
+                         billing_project_id=os.getenv("billing_project_id"))
         return df
     except Exception as e:
         logger.error(f"Error running silver query: {e}")
@@ -107,7 +107,7 @@ def add_completeness_flags(silver_df: pd.DataFrame,
     silver_df = silver_df.copy()
     tmp_flag = silver_df[value_columns].notnull().all(axis=1)
     silver_df['is_complete_grouped'] = (silver_df.assign(_tmp=tmp_flag)
-                                                 .groupby('id_municipio')['_tmp']
+                                                 .groupby('city_id')['_tmp']
                                                  .transform(lambda x: x.all()))
     return silver_df
 
@@ -123,8 +123,8 @@ def validate_silver(silver_df: pd.DataFrame) -> None:
         ValueError: If validation fails for any DataFrame.
     """
     if not validate_data(silver_df,
-                             schema=silver_schema,
-                             name="Silver"):
+                         schema=silver_schema,
+                         name="Silver"):
             raise ValueError("Silver data validation failed")       
 
 def save_silver(silver_df: pd.DataFrame,
@@ -174,7 +174,7 @@ def process_silver_data() -> Optional[bd.Table]:
         silver_df = run_silver_query(query)
         
         value_columns = ['population',
-                         'gpd',
+                         'gdp',
                          'education_spending',
                          'enrollments',
                          'ideb_initial_years',
@@ -183,7 +183,8 @@ def process_silver_data() -> Optional[bd.Table]:
                          'dropout_rates_final_years',
                          'gdp_per_capita',
                          'spending_per_student']
-        silver_df = add_completeness_flags(silver_df, value_columns)
+        silver_df = add_completeness_flags(silver_df,
+                                           value_columns)
 
         validate_silver(silver_df)
         analyze_data(silver_df,

@@ -140,12 +140,12 @@ def save_bronze(dataframes: Dict[str, pd.DataFrame],
         for name, df in dataframes.items():
             if df is not None:
                 save.save_data(df,
-                            f"bronze_{name}",
-                            directory=local_path)
+                               f"bronze_{name}",
+                               directory=local_path)
                 save.save_data_to_gcs(df,
-                                    f"bronze_{name}",
-                                    bucket,
-                                    layer=layer)
+                                      f"bronze_{name}",
+                                      bucket,
+                                      layer=layer)
                 logger.info(f"Data saved at {local_path} and GCP://{bucket}/{layer} successfully")
     except Exception as e:
                 logger.error(f"Error saving {layer}: {e}")

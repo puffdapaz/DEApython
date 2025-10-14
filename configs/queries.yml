@@ -176,8 +176,8 @@ silver:
       pb.pib AS gdp,
       ge.valor AS education_spending,
       m.quantidade_matricula AS enrollments,
-      i.ideb_iniciais AS ideb_initial,
-      i.ideb_finais AS ideb_final,
+      i.ideb_iniciais AS ideb_initial_years,
+      i.ideb_finais AS ideb_final_years,
       a.dropout_rates_initial_years,
       a.dropout_rates_final_years,
       -- Calculate derived metrics

@@ -24,7 +24,7 @@ def _convert_keys(obj: Any) -> Any:
     if isinstance(obj,
                   dict):
         return {str(k): _convert_keys(v) for k,
-                        v in obj.items()}
+                                      v in obj.items()}
     elif isinstance(obj,
                     list):
         return [_convert_keys(i) for i in obj]
@@ -100,12 +100,11 @@ def save_data(obj: pd.DataFrame | dict,
                  file_format)
     return path
 
-def save_data_to_gcs(
-    obj: pd.DataFrame | dict,
-    filename: str, 
-    bucket_name: str, 
-    layer: str = "bronze", 
-    file_format: str = "parquet") -> str:
+def save_data_to_gcs(obj: pd.DataFrame | dict,
+                     filename: str, 
+                     bucket_name: str, 
+                     layer: str = "bronze", 
+                     file_format: str = "parquet") -> str:
     """
     Save a DataFrame or dictionary to Google Cloud Storage (GCS).
     Requires GOOGLE_APPLICATION_CREDENTIALS to be set in .env or environment.
@@ -129,12 +128,12 @@ def save_data_to_gcs(
                             f"{filename}.{file_format}")
     try:
         _save_to_file(obj,
-                     tmp_file,
-                     file_format)
+                      tmp_file,
+                      file_format)
         bucket.blob(blob_path).upload_from_filename(tmp_file)
     except Exception as e:
         raise RuntimeError(f"Failed to upload {filename} to GCS: {e}")
     finally:
         if os.path.exists(tmp_file):
-            os.remove(tmp_file)
+                          os.remove(tmp_file)
     return blob_path

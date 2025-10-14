@@ -5,7 +5,9 @@ This module creates derived features for comparative analysis.
 import pandas as pd
 import logging
 
-# Set up logging
+# ---------------------------------------------------------------------
+# Config Loading
+# ---------------------------------------------------------------------
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -23,17 +25,17 @@ def eff_rank(df: pd.DataFrame) -> pd.DataFrame:
     try:
         df = df.copy()
         df = df.sort_values(
-            by=["ano", "DEA_vrs_input", "DEA_scale_efficiency"],
-            ascending=[True, False, False],
-            ignore_index=True
-        )
-
+            by=["year", 
+                "DEA_vrs_input", 
+                "DEA_scale_efficiency"],
+            ascending=[True, 
+                       False, 
+                       False],
+            ignore_index=True)
         # Create group-based rank
         df["rank_vrs"] = (
-            df.groupby("ano")
-              .cumcount() + 1  # 1-based rank
-        )
-
+            df.groupby("year")
+              .cumcount() + 1) # 1-based rank
         return df
     except Exception as e:
         logger.error(f"Error in eff_rank: {e}")
@@ -49,8 +51,8 @@ def yoy_variance(df: pd.DataFrame) -> pd.DataFrame:
     """
     try:
         df = df.copy()
-        df["pct_var_vrs"] = df.groupby("id_municipio")["DEA_vrs_input"].pct_change()
-        df["pct_var_scale"] = df.groupby("id_municipio")["DEA_scale_efficiency"].pct_change()
+        df["pct_var_vrs"] = df.groupby("city_id")["DEA_vrs_input"].pct_change()
+        df["pct_var_scale"] = df.groupby("city_id")["DEA_scale_efficiency"].pct_change()
         return df
     except Exception as e:
         logger.error(f"Error in yoy_variance: {e}")
@@ -97,15 +99,15 @@ def median_deltas(df: pd.DataFrame) -> pd.DataFrame:
     """
     try:
         df = df.copy()
-        df["delta_vrs_median"] = df["DEA_vrs_input"] - df.groupby("ano")["DEA_vrs_input"].transform("median")
-        df["delta_scale_median"] = df["DEA_scale_efficiency"] - df.groupby("ano")["DEA_scale_efficiency"].transform("median")
+        df["delta_vrs_median"] = df["DEA_vrs_input"] - df.groupby("year")["DEA_vrs_input"].transform("median")
+        df["delta_scale_median"] = df["DEA_scale_efficiency"] - df.groupby("year")["DEA_scale_efficiency"].transform("median")
         return df
     except Exception as e:
         logger.error(f"Error in median_deltas: {e}")
         raise
 
 def state_benchmarks(df: pd.DataFrame,
-                        gold_df: pd.DataFrame) -> pd.DataFrame:
+                     gold_df: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate state-level benchmarks and comparisons.
     Args:
@@ -115,16 +117,18 @@ def state_benchmarks(df: pd.DataFrame,
     """
     try:
         df = df.copy()
-        if "sigla_uf" in gold_df.columns:
-            state_avg = (gold_df.groupby(["ano", "sigla_uf"])
-                               [["DEA_vrs_input", "DEA_scale_efficiency"]]
-                               .mean()
-                               .reset_index()
-                               .rename(columns={
-                                   "DEA_vrs_input": "state_avg_vrs",
-                                   "DEA_scale_efficiency": "state_avg_scale"
-                               }))
-            df = df.merge(state_avg, on=["ano", "sigla_uf"], how="left")
+        if "state" in gold_df.columns:
+            state_avg = (gold_df.groupby(["year",
+                                          "state"])
+                               [["DEA_vrs_input",
+                                 "DEA_scale_efficiency"]]
+                                .mean()
+                                .reset_index()
+                                .rename(columns={"DEA_vrs_input": "state_avg_vrs",
+                                                 "DEA_scale_efficiency": "state_avg_scale"}))
+            df = df.merge(state_avg, on=["year",
+                                         "state"],
+                                     how="left")
         return df
     except Exception as e:
         logger.error(f"Error in regional_benchmarks: {e}")
@@ -140,8 +144,8 @@ def peer_groups(df: pd.DataFrame) -> pd.DataFrame:
     """
     try:
         df = df.copy()
-        if "populacao" in df.columns:
-            df["peer_group"] = pd.qcut(df["populacao"], 4, labels=["Small", "Medium", "Large", "Mega"])
+        if "population" in df.columns:
+            df["peer_group"] = pd.qcut(df["population"], 4, labels=["Small", "Medium", "Large", "Mega"])
         return df
     except Exception as e:
         logger.error(f"Error in peer_groups: {e}")
@@ -151,7 +155,7 @@ def peer_groups(df: pd.DataFrame) -> pd.DataFrame:
 # Main Workflow Function
 # ---------------------------------------------------------------------
 def analytical_features(df: pd.DataFrame,
-                        gold_df: pd.DataFrame) -> pd.DataFrame:
+                        enriched: pd.DataFrame) -> pd.DataFrame:
     """
     Main function to add all analytical features to gold DataFrame.
     Args:
@@ -159,8 +163,8 @@ def analytical_features(df: pd.DataFrame,
     Returns:
         Enhanced DataFrame with all analytical features
     """
+    print("Calculating metrics...")
     try:
-        print("Calculating metrics...")
         enriched = df.copy()
         enriched = eff_rank(enriched)
         enriched = yoy_variance(enriched)
@@ -168,8 +172,6 @@ def analytical_features(df: pd.DataFrame,
         enriched = median_deltas(enriched)
         enriched = state_benchmarks(enriched, enriched)
         enriched = peer_groups(enriched)
-
-        logger.info("Metrics added successfully")
         return enriched
     except Exception as e:
         logger.error(f"Error in analytical_features: {e}")

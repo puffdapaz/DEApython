@@ -64,7 +64,7 @@ dropout_rates_schema = DataFrameSchema({
 # Dictionary of bronze schemas
 schemas = {
     "population": population_schema,
-    "pib": gdp_schema,
+    "gdp": gdp_schema,
     "education_spending": education_spending_schema,
     "enrollments": enrollments_schema,
     "ideb": ideb_schema,
@@ -75,20 +75,20 @@ schemas = {
 # Silver layer schema (enriched, joined data)
 # ---------------------------------------------------------------------
 silver_schema = DataFrameSchema({
-    "id_municipio": Column(str, nullable=False),
-    "sigla_uf": Column(str, nullable=False),
-    "ano": Column(int, checks=Check.isin(VALID_YEARS)),
-    "populacao": Column(int, nullable=True, checks=Check.ge(0)),
-    "nome": Column(str, nullable=True),
-    "pib": Column(int, nullable=True, checks=Check.ge(0)),
-    "gastos_educacao": Column(int, nullable=True, checks=Check.ge(0)),
-    "quantidade_matricula": Column(int, nullable=True, checks=Check.ge(0)),
-    "ideb_iniciais": Column(float, nullable=True, checks=Check.between(0, 10)),
-    "ideb_finais": Column(float, nullable=True, checks=Check.between(0, 10)),
-    "taxa_abandono_ef_anos_iniciais": Column(float, nullable=True, checks=Check.between(0, 100)),
-    "taxa_abandono_ef_anos_finais": Column(float, nullable=True, checks=Check.between(0, 100)),
-    "pib_per_capita": Column(float, nullable=True, checks=Check.ge(0)),
-    "gasto_por_aluno": Column(float, nullable=True, checks=Check.ge(0)),
+    "city_id": Column(str, nullable=False),
+    "state": Column(str, nullable=False),
+    "year": Column(int, checks=Check.isin(VALID_YEARS)),
+    "population": Column(int, nullable=True, checks=Check.ge(0)),
+    "city_name": Column(str, nullable=True),
+    "gdp": Column(int, nullable=True, checks=Check.ge(0)),
+    "education_spending": Column(int, nullable=True, checks=Check.ge(0)),
+    "enrollments": Column(int, nullable=True, checks=Check.ge(0)),
+    "ideb_initial_years": Column(float, nullable=True, checks=Check.between(0, 10)),
+    "ideb_final_years": Column(float, nullable=True, checks=Check.between(0, 10)),
+    "dropout_rates_initial_years": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "dropout_rates_final_years": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "gdp_per_capita": Column(float, nullable=True, checks=Check.ge(0)),
+    "spending_per_student": Column(float, nullable=True, checks=Check.ge(0)),
     "educ_pct_gdp": Column(float, nullable=True, checks=Check.between(0, 100)),
     "is_complete_grouped": Column(bool, nullable=False),
 })
@@ -97,14 +97,20 @@ silver_schema = DataFrameSchema({
 # Gold layer schema (final features for modeling/DEA)
 # ---------------------------------------------------------------------
 gold_schema = DataFrameSchema({
-    "id_municipio": Column(str, nullable=False),
-    "ano": Column(int, nullable=False, checks=Check.isin(VALID_YEARS)),
-    "pib_per_capita": Column(float, nullable=True, checks=Check.ge(0)),
-    "gasto_por_aluno": Column(float, nullable=True, checks=Check.ge(0)),
-    "ideb_iniciais": Column(float, nullable=True, checks=Check.between(0, 10)),
-    "ideb_finais": Column(float, nullable=True, checks=Check.between(0, 10)),
-    "taxa_abandono_ef_anos_iniciais": Column(float, nullable=True, checks=Check.between(0, 100)),
-    "taxa_abandono_ef_anos_finais": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "city_id": Column(str, nullable=False),
+    "state": Column(str, nullable=False),
+    "year": Column(int, checks=Check.isin(VALID_YEARS)),
+    "population": Column(int, nullable=True, checks=Check.ge(0)),
+    "city_name": Column(str, nullable=True),
+    "gdp": Column(int, nullable=True, checks=Check.ge(0)),
+    "education_spending": Column(int, nullable=True, checks=Check.ge(0)),
+    "enrollments": Column(int, nullable=True, checks=Check.ge(0)),
+    "ideb_initial_years": Column(float, nullable=True, checks=Check.between(0, 10)),
+    "ideb_final_years": Column(float, nullable=True, checks=Check.between(0, 10)),
+    "dropout_rates_initial_years": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "dropout_rates_final_years": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "gdp_per_capita": Column(float, nullable=True, checks=Check.ge(0)),
+    "spending_per_student": Column(float, nullable=True, checks=Check.ge(0)),
     "educ_pct_gdp": Column(float, nullable=True, checks=Check.between(0, 100)),
     "is_complete_grouped": Column(bool, nullable=False),
     "DEA_crs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
@@ -114,7 +120,7 @@ gold_schema = DataFrameSchema({
     "DEA_irs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_drs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_scale_efficiency": Column(float, nullable=True, checks=Check.between(0, 1)),
-    "DEA_returns_nature": Column(str, nullable=True, checks=Check.isin(["Constante", "Crescente", "Decrescente"])),
+    "DEA_returns_nature": Column(str, nullable=True, checks=Check.isin(["Constant", "Increasing", "Decreasing"])),
     "rank_vrs": Column(int, nullable=True, checks=Check.between(1, 5570)),
     "pct_var_vrs": Column(float, nullable=True, checks=Check.between(-50, 200)),
     "pct_var_scale": Column(float, nullable=True, checks=Check.between(-50, 200)),
@@ -130,11 +136,10 @@ gold_schema = DataFrameSchema({
 # ---------------------------------------------------------------------
 # Validation function
 # ---------------------------------------------------------------------
-def validate_data(
-                data: pd.DataFrame | dict[str, pd.DataFrame],
-                schema_map: Optional[dict[str, pa.DataFrameSchema]] = None,
-                schema: Optional[pa.DataFrameSchema] = None,
-                name: str = "dataset") -> bool:
+def validate_data(data: pd.DataFrame | dict[str, pd.DataFrame],
+                  schema_map: Optional[dict[str, pa.DataFrameSchema]] = None,
+                  schema: Optional[pa.DataFrameSchema] = None,
+                  name: str = "dataset") -> bool:
     """
     Validate input data against defined Pandera schemas.
     Args:
@@ -148,7 +153,8 @@ def validate_data(
         ValueError: If schema is missing when validating a single DataFrame.
         TypeError: If data type is not supported.
     """
-    if isinstance(data, dict):
+    if isinstance(data,
+                  dict):
         all_valid = True
         for name, df in data.items():
             if df is None:
@@ -156,7 +162,8 @@ def validate_data(
                 continue
             if schema_map and name in schema_map:
                 try:
-                    schema_map[name].validate(df, lazy=True)
+                    schema_map[name].validate(df,
+                                              lazy=True)
                     print(f"{name} validation passed. Shape: {df.shape}")
                 except pa.errors.SchemaErrors as e:
                     logger.error(f"{name} validation failed:\n{e.failure_cases}")
@@ -168,7 +175,8 @@ def validate_data(
         if schema is None:
             raise ValueError("A schema must be provided for single DataFrame validation")
         try:
-            schema.validate(data, lazy=True)
+            schema.validate(data,
+                            lazy=True)
             print(f"{name} validation passed. Shape: {data.shape}")
             return True
         except pa.errors.SchemaErrors as e:

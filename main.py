@@ -6,8 +6,8 @@ def main():
     """
     Entrypoint for DEApython project.
     Runs the complete ETL pipeline:
-    1. Process data at bronze ingestion, silver processing and gold modeling
-    2. Run statistical diagnostics
+    1. Process data at bronze ingestion, silver processing and gold DEA modeling
+    2. Run statistical diagnostics, additional metrics
     3. Save results locally and to GCP in Medallion architecture
     """
     print(".:.Starting DEApython pipeline.:.")
