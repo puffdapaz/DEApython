@@ -1,76 +1,136 @@
-# Collection and Process of IPEA public data using python: Redoing a Scientific Article project
+# Collection and Processing of Public Elementary Education Data using Python: Reproducing a Scientific Paper Project
 
 [![pt-br](https://img.shields.io/badge/lang-pt--br-green.svg)](https://github.com/puffdapaz/DEApython/blob/main/README.pt-BR.md)
 
 [![App](https://img.shields.io/badge/Streamlit-FF4B4B.svg?style=for-the-badge&logo=Streamlit&logoColor=white)]()
 
-### [Full Article](https://github.com/puffdapaz/DEApython/blob/main/docs/Eficiência%20dos%20gastos%20públicos%20com%20educação%20nos%20municípios%20baianos.pdf)
+## Efficiency of public spending on education in Brazilian municipalities applying Data Envelopment Analysis
 
-## Impact of tax revenue on economic and social development: a study in Brazilian municipalities
-- Municipal Human Development Index 2010;
-- Current Revenue 2010;
-- Municipal Gross Domestic Product 2010;
-- Current Revenue 2010 / GDP 2010 = Tax Burden 2010.
+### [Data Source](https://basedosdados.org)
 
-### [Data Source](http://www.ipeadata.gov.br/Default.aspx)
+### Improvements
+- Expand the study to all possible municipalities;<br/>
+- Deepen the analyses;<br/>
+- Include a data visualization dashboard;<br/>
+- Document and publish.<br/>
 
-### Increments
-- Expand research to all possible municipalities;
-- Include dashboard with data visualization;
-- Document and publish it.
+## Table of Contents
+- [About the Project](#project)
+- [Pipeline and Architecture](#code)
+- [DEA Modeling](#methods)
+- [Results](#results)
+- [Paper and References](https://github.com/puffdapaz/DEApython/blob/main/docs/Eficiência%20dos%20gastos%20públicos%20com%20educação%20nos%20municípios%20baianos.pdf)
+- [How to replicate the repository](https://github.com/puffdapaz/DEApython/blob/main/SETUP.en-US.md)
 
-## The Project
-The aim of the project is to learn and improve the use of python for data engineering, analysis and science through a research carried out on 2015 in a scientific article, as a reference.
+## Project
+The goal of this project is to improve the use of good practices in Python for data engineering, analysis, and science through the replication and enhancement of a research study conducted in 2023, published as a scientific paper based on public social data.<br/>
 
-In addition to explore good practices in python, the purpose is to apply concepts from Medallion Architecture, object-oriented programming and ETL, using public social data from Brazilian municipalities.
+The study evaluates the technical and scale efficiency of Brazilian municipalities regarding the allocation of public resources to education in 2017 and 2019, applying the DEA (Data Envelopment Analysis) model.<br/>
 
-## The Code
-With the intends to incorporate usage of tool's features and best practices in code construction, an initial approach was taken and kept for record [IPEAv1.py](https://github.com/puffdapaz/DEApython/blob/main/IPEAv1.py), but was modified with improvement in sophistication and data visualization.
+In addition to reproducing the econometric model, the project implements a modular data processing pipeline (Medallion Architecture), ensuring traceability, schema validation, and local and cloud storage.<br/>
 
-1. The workflow begins with directories creation, that emulate the Medallion architecture layers - Bronze, Silver and Gold - progressively increasing the structure and quality of the saved data, and an additional folder to the results and analysis.
-2. In this project, five data series are searched, already filtered by the year 2010\*, in the IPEAdata database (public database of the Institute of Applied Economic Research, a federal public foundation linked to the Ministry of Planning and Budget, in Brazil):
-     - Four of them come from python library ['ipeadatapy'](https://pypi.org/project/ipeadatapy/)<br/>
-         Three of the series lists available:<br/>
-             GDP;<br/>
-             Population; (It was sample filter criteria on the original project)<br/>
-             Current Revenue;<br/>
-         One from the list of territories:<br/>
-             Municipalities.<br/>
-     - One of them comes from the R package ['ipeadatar'](https://cran.r-project.org/web/packages/ipeadatar/index.html) because it is not available at municipal granularity in the python library.<br/>
-         IDHM.<br/>
-The fetched series are saved as DataFrame in their original/raw structure at the Bronze layer.<br/>
-\* The IDHM series has a date field conversion for 2010 year filtering, using a different fetch structure from the python library.
-3. The DataFrames go through a transformation process, filtering only occurrences by municipality, carrying out DataType conversions, renaming fields and removing unused fields and eventual duplication of occurrences.<br/>
-The transformed DataFrames are saved at the Silver layer.
-4. At this stage, data from previously treated variables are consolidated into a single Dataframe, gathering (through the Municipal Code established by [IBGE - Brazilian Institute of Geography and Statistics](https://servicodados.ibge.gov.br/api/docs/)) the names of the municipalities and other selected variables.<br/>
-Next, there is removal of occurrences that do not contain all variables, fields reordering, occurrences sort (by Municipal Codes, ascending) and a creation of a calculated 'Tax Burden' field composed by the ratio between municipal Current Revenues and GDP.<br/>
-The DataFrame ready for analysis is saved at the Gold layer.
-5. From the finished DataFrame, the following applies:<br/>
-- Summary of basic descriptive statistics;<br/>
-- Correlation matrix using Pearson method;<br/>
-- Ordinary Least Squares Regression;<br/>
-- Variance Analysis (ANOVA).<br/>
-The descriptive summary is saved in parquet format; the other statistical model results are saved in a single HTML file; both in the Statistical Analysis folder.
-6. Then the obtaining of municipal geographic polygons through [geobr](https://pypi.org/project/geobr/) and again through the Municipal Code established by IBGE, the consolidation of socioeconomic information centralized on the DataFrame saved in Gold layer, with geographic coordinates.
-7. After finishing the data processing, are displayed, histograms of the selected variables, a scatter plot, using IDHM and Tax Burden, with a trendline, a correlation heatmap, and the map.
-8. The scripts and its results files are saved in this [GitHub](https://github.com/puffdapaz/DEApython) repository, and processed through Streamlit for data plot.
+## Code
+1. **Bronze Layer**
+The flow begins with data extraction using the ['basedosdados SDK'](https://basedosdados.org), organization and ['table consistency validation'](https://www.union.ai/pandera), and storage in .parquet format in a local directory and in ['GCS'](https://cloud.google.com/storage) in the bronze layer, as DataFrames in their original/raw structure, without any modification.<br/>
+The data collected are at the municipal level and refer to the years 2017 and 2019 for Elementary Education:<br/>
+- Population;<br/>
+- GDP;<br/>
+- Education Spending;<br/>
+- Number of Enrollments;<br/>
+- IDEB;<br/>
+    - Early years;<br/>
+    - Final years;<br/>
+- Dropout Rate;<br/>
+    - Early years;<br/>
+    - Final years.<br/>
+
+2. **Silver Layer**
+The tables go through a transformation process, being combined into a single DataFrame (through the Municipality Code established by [IBGE - Instituto Brasileiro de Geografia e Estatística](https://servicodados.ibge.gov.br/api/docs/)), field renaming, and inclusion of the following fields:<br/>
+- City name;<br/>
+- GDP per Capita (GDP / Population);<br/>
+- Spending per Student (Education Spending / Number of Enrollments);<br/>
+- % of GDP in Education (Education Spending / GDP);<br/>
+- Data completeness flag by city.<br/>
+The DataFrame undergoes descriptive and correlation analysis and is also ['validated'](https://www.union.ai/pandera) regarding fields and data types, and finally stored in .parquet format in a local directory and in ['GCS'](https://cloud.google.com/storage) in the silver layer.<br/>
+
+3. **Gold Layer**
+At this stage, the flow starts from the DataFrame saved in the previous step (silver). The data are filtered by the data completeness field, and the relevant fields are extracted and organized into matrices to be modeled.<br/>
+\* The Dropout Rate fields are converted for modeling adjustment since higher dropout rates indicate worse performance. Unlike the original study, which used the ratio '1/rate' for adjustment, this project converts the rate using '100 - rate' base.<br/>
+
+The ['dealib'](https://github.com/ArtyomViryutin/dealib) model is then applied to the matrices, and additional fields are calculated based on the results:<br/>
+- Scale efficiency (Constant Return Input-Oriented / Variable Return Input-Oriented);<br/>
+- Classification of Returns Nature.<br/>
+
+    4. **Additional Metrics**
+    There is an additional step for calculating metrics used in visual interpretation of the results:<br/>
+    - Annual efficiency ranking;<br/>
+    - Percent variation between periods;<br/>
+    - Classification:<br/>
+        - Technical efficiency classes;<br/>
+        - Scale efficiency classes;<br/>
+    - Variation:<br/>
+        - Comparison with the median technical efficiency of the year;<br/>
+        - Comparison with the median scale efficiency of the year;<br/>
+        - Comparison with the state average technical efficiency of the year;<br/>
+        - Comparison with the state average scale efficiency of the year;<br/>
+    - Clustering by characteristics.<br/>
+The results and additional calculated fields are aggregated into the main DataFrame, which undergoes descriptive and correlation analysis, as well as statistical tests (Normality, Distribution, and t-test), and ['validação'](https://www.union.ai/pandera) regarding fields, values, and data types.<br/>
+The DataFrame, the descriptive summary (both in .parquet format), and the statistical test results (in .json format) are stored in a local directory and in ['GCS'](https://cloud.google.com/storage) in the gold layer.<br/>
+
+5. ****
+The municipal geographic polygons are then obtained using geobr
+ and again through the Municipality Code established by IBGE
+, consolidating the socioeconomic information centralized in the DataFrame saved in the Gold layer, with the geographic coordinates.<br/>
+
+6. ****
+With the completion of data processing, the DataFrame is made available for consumption in Business Intelligence tools. For ['illustration'](link powerbi), histograms of the selected variables, a scatter plot between HDI and Tax Burden with a trend line, a correlation heatmap, and a map are displayed.<br/>
 
 ## Methods
-### Correlation Matrix (Pearson)
-- *Variables: MHDI 2010, Tax Burden, GDP 2010, Current Revenue 2010;*
-### Ordinary Least Squares Regression (OLS)
-- *Predictors: (Constant), Tax Burden, Current Revenue 2010, GDP 2010;*<br/>
-- *Dependent Variable: MHDI 2010.*
-### Variance Analysis (ANOVA)
-- *Predictors: (Constant), Tax Burden, Current Revenue 2010, GDP 2010;*<br/>
-- *Dependent Variable: MHDI 2010.*
+### **CRS** — *Constant Returns to Scale*
+- CCR Model by Charnes, Cooper, and Rhodes;<br/>
+### **VRS** — *Variable Returns to Scale*
+- BCC Model by Banker, Charnes, and Cooper;<br/>
+### **Input-Oriented**
+- Seeks to minimize inputs for a given level of output;<br/>
+### **Output-Oriented**
+- Seeks to maximize outputs for a given level of input.<br/>
+### Parameters:
+- Period:<br/>
+    - 2017;<br/>
+    - 2019;<br/>
+- Input Variables:<br/>
+    - GDP per capita;<br/>
+    - Municipal spending per student (Education spending / Enrollments);<br/>
+- Output Variables:<br/>
+    - IDEB early years;<br/>
+    - IDEB final years;<br/>
+    - Dropout rate early years;<br/>
+    - Dropout rate final years.<br/>
+
+### Model
+| **DEA CRS (Input-Oriented)** | **DEA VRS (Input-Oriented)** |
+|-------------------------------|-------------------------------|
+| **Objective:**<br>Minimize $$\theta = \min \frac{\lambda u}{\lambda v}$$ | **Objective:**<br>Minimize $$\theta = \min \frac{\lambda}{\theta u}$$ |
+| **Subject to:**<br>$$\sum_i u_i x_i \le 1$$<br>$$\sum_i u_i y_i \ge \theta y^0 \quad \forall \text{DMUs}$$<br>$$u_i \ge 0, \; v_i \ge 0$$ | **Subject to:**<br>$$\sum_i v_i x_i \le 1$$<br>$$\sum_i v_i y_i \ge \theta u \quad \forall \text{DMUs}$$<br>$$u_i \ge 0, \; v_i \ge 0$$ |
+
+| **DEA CRS (Output-Oriented)** | **DEA VRS (Output-Oriented)** |
+|-------------------------------|-------------------------------|
+| **Objective:**<br>Minimize $$\theta = \min \frac{\lambda v}{\lambda u}$$ | **Objective:**<br>Minimize $$\theta = \min \frac{\theta v}{\lambda}$$ |
+| **Subject to:**<br>$$\sum_i v_i x_i \ge x^0 \quad \forall \text{DMUs}$$<br>$$\sum_i v_i y_i = 1$$<br>$$u_i \ge 0, \; v_i \ge 0$$ | **Subject to:**<br>$$\sum_i u_i x_i \ge \theta v \quad \forall \text{DMUs}$$<br>$$\sum_i u_i y_i = 1$$<br>$$u_i \ge 0, \; v_i \ge 0$$ |
+
+### Notation
+- \( x_i \): input \( i \);<br/>
+- \( y_i \): output \( i \);<br/>
+- \( u_i, v_i \): weights for outputs and inputs;<br/>
+- \( \theta \): efficiency score.<br/>
 
 ## Results
-The extension of the study to more municipalities reinforced the results obtained in the original research in 2015. <br/>
->"... in many cases there is resources availability to meet population needs, however, there is a lack of effectiveness in management of public expenditure, without showing proportional progress in social development indicators, just as, there are municipalities that have high indicators, without a large pool of resources.
+Extending the study to more municipalities reinforced the results obtained in the original 2023 research. <br/>
+>"... Excellence in input management does not necessarily mean increasing investment per student or the overall budget, but rather seeking the least possible use of resources while aiming for social well-being; it is up to decision-makers to continuously apply themselves, regardless of favorable scenarios, respecting socioeconomic demands and ensuring basic access conditions for students.
 ><br/>
->The capacity to execute public expenditure is clearly not satisfactory, given the immediate need for tax regulatory reform and distribution of this revenue by the government, valuing social justice and the effective provision of public services. The Fiscal Responsibility Brazilian Law [(LC 101/2000)](https://www.planalto.gov.br/ccivil_03/leis/lcp/lcp101.htm) restricts public policy decisions, prioritizing macroeconomic balance over Social well-being"
+>Improving spending management involves not only investing in education but ensuring equity in opportunities."
 
-The relationship between MHDI and tax burden is considered moderate and negative (-0.6). The HDI and GDP ratio with 0.12 shows that the relationship is weak and positive. <br/>
-The least squares model presented a R² of 0.368, that is, GDP and tax burden explain 36.8% of the HDI value of each municipality. <br/>
-The F test with a result of 1602 and significance of 0.00 allows us to infer that the model is significant at a 5% confidence level. The variables tax burden with -55.399 and GDP with 5.869 allow us to reject the null hypothesis; both with significance of 0.00. <br/>
+Statistical tests show three main conclusions: scale efficiency data do not follow a normal distribution (Shapiro–Wilk test, p < 10⁻⁴¹), the mean scale efficiency is significantly different from 1 (t-test, p = 0.0), and the distributions between CRS/VRS and IRS/DRS are significantly different (Kolmogorov–Smirnov test, p < 10⁻⁴³). The very low p-values (< 0.05) indicate high confidence that these differences are statistically significant.<br/>
+On average, municipalities showed a slight increase in GDP, education spending, and GDP per capita by 2019, as well as improvements in IDEB scores and reduced dropout rates. DEA efficiency scores remained relatively stable, with VRS efficiency around 0.52 in 2019, indicating moderate resource-use efficiency.<br/>
+Correlations show that higher **percentages of education spending relative to GDP** are **strongly associated with better DEA efficiency scores**, while dropout rates correlate negatively with IDEB.<br/>
+Municipalities with higher GDP per capita or spending per student tend to have better educational outcomes, **but not necessarily higher efficiency, suggesting disparities in resource allocation.** Scale efficiency improved slightly, although many municipalities still operate below the optimal scale.<br/>
