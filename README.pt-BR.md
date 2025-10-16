@@ -14,7 +14,7 @@
 - Incluir painel com visualizaçao de dados;<br/>
 - Documentar e publicar.<br/>
 
-## 📑 Sumário
+## Sumário
 - [Sobre o Projeto](#projeto)
 - [Pipeline e Arquitetura](#código)
 - [Modelagem DEA](#métodos)
@@ -24,13 +24,11 @@
 
 ## Projeto
 O intuito do projeto é aperfeiçoar a utilização de boas práticas em python para engenharia, análise e ciência de dados através de réplica e aprimoramento de pesquisa realizada em 2023 em artigo científico utilizando dados públicos sociais, como referência.<br/>
-
 O estudo avalia a eficiência técnica e de escala dos municípios brasileiros quanto à alocação de recursos públicos na educação em 2017 e 2019, aplicando o modelo DEA (Análise Envoltória de Dados).<br/>
-
 Além de reproduzir o modelo econométrico, o projeto implementa uma pipeline modular de tratamento dos dados (Arquitetura Medallion), garantindo rastreabilidade, validação do esquema, e armazenamento local e em nuvem.<br/>
 
 ## Código
-1. **Camada Bronze**
+1. **Camada Bronze**<br/>
 O fluxo inicia com a extração dos dados em ['basedosdados SDK'](https://basedosdados.org), organização e ['validação de consistencia das tabelas'](https://www.union.ai/pandera) e, armazenamento em extensão .parquet em diretório local e ['GCS'](https://cloud.google.com/storage) na camada bronze, como DataFrames em sua estrutura original/integral, sem qualquer modificação.<br/>
 Os dados coletados são da esfera municipal e se referem aos anos de 2017 e 2019 do Ensino Fundamental:<br/>
 - População;<br/>
@@ -44,7 +42,7 @@ Os dados coletados são da esfera municipal e se referem aos anos de 2017 e 2019
     - Anos iniciais;<br/>
     - Anos finais.<br/>
 
-2. **Camada Prata**
+2. **Camada Prata**<br/>
 As tabelas passam por processo de transformação combinadas em um único DataFrame (através do Código de Município estabelecido pelo [IBGE - Instituto Brasileiro de Geografia e Estatística](https://servicodados.ibge.gov.br/api/docs/)), renomeação de campos, e inclusão dos campos:<br/>
 - Nome dos municípios;<br/>
 - PIB per Capita (PIB / População);<br/>
@@ -53,7 +51,7 @@ As tabelas passam por processo de transformação combinadas em um único DataFr
 - Verificador de totalidade dos dados do Município.<br/>
 O DataFrame passa por análise descritiva e de correlações, e também é ['validado'](https://www.union.ai/pandera) quanto aos campos e tipagem de dados, e por fim, armazenado em extensão .parquet em diretório local e ['GCS'](https://cloud.google.com/storage) na camada prata.<br/>
 
-3. **Camada Ouro**
+3. **Camada Ouro**<br/>
 Nessa etapa, o fluxo se inicia a partir do DataFrame salvo na etapa anterior (prata). Os dados são filtrados pelo campo de totalidade dos dados, e extraem-se os campos a serem organizados como matrizes que serão modeladas.<br/>
 \* Os campos de Taxa de Abandono têm uma conversão para ajuste na modelagem, uma vez que quanto maior o valor (abandono), pior é o índice. Diferente da pesquisa original, que utilizou a razão '1/taxa' para ajuste, este projeto converte a taxa nas bases '100 - taxa'.<br/>
 
@@ -61,7 +59,7 @@ O modelo ['dealib'](https://github.com/ArtyomViryutin/dealib) é então aplicado
 - Eficiência de escala (Ret. Constante Orient. Input / Ret. Variável Orient. Input);<br/>
 - Classificação de Natureza dos Retornos.<br/>
 
-    4. **Métricas Adicionais**
+    4. **Métricas Adicionais**<br/>
     Há uma etapa adicional de cálculo de métricas a serem utilizadas na interpretação gráfica dos resultados:<br/>
     - Ranking anual de eficiência;<br/>
     - Índice de variação percentual entre períodos;<br/>
@@ -77,10 +75,10 @@ O modelo ['dealib'](https://github.com/ArtyomViryutin/dealib) é então aplicado
 Os resultados e campos adicionais calculados são agregados ao DataFrame inicial, que passa por análise descritiva e de correlações, além de testes estatísticos (Normalidade, Distribuição e teste T), e ['validação'](https://www.union.ai/pandera) quanto aos campos, valores e tipagem de dados.<br/>
 O Dataframe, o sumário descritivo (ambos em extensão .parquet) e os resultados dos testes estatísticos (em extensão .json) são armazenado em diretório local e ['GCS'](https://cloud.google.com/storage) na camada ouro.<br/>
 
-5. ****
+5. ****<br/>
 Há então a obtenção dos polígonos geográficos municipais através do [geobr](https://pypi.org/project/geobr/) e novamente mediante o Código de Município estabelecido pelo [IBGE](https://servicodados.ibge.gov.br/api/docs/), a consolidação das informações socioeconomicas centralizadas no DataFrame salvo na camada Gold, com as coordenadas geográficas.<br/>
 
-6. ****
+6. ****<br/>
 Com a finalização do tratamento dos dados, o DataFrame é disponibilizado para consumo em ferramentas de Inteligência de Negócio. Para ['ilustração'](link powerbi), são exibidos /histogramas das variáveis selecionadas, um gráfico de dispersão, entre IDHM e Carga Tributária, contendo uma linha de tendência, um diagrama de correlação de calor, e o mapa/.<br/>
 
 ## Métodos
