@@ -16,6 +16,7 @@
 
 ## Table of Contents
 - [About the Project](#project)
+- [Diagram](https://github.com/puffdapaz/DEApython/blob/main/project_diagram.md)
 - [Pipeline and Architecture](#code)
 - [DEA Modeling](#methods)
 - [Results](#results)
@@ -29,7 +30,7 @@ In addition to reproducing the econometric model, the project implements a modul
 
 ## Code
 1. **Bronze Layer**<br/>
-The flow begins with data extraction using the ['basedosdados SDK'](https://basedosdados.org), organization and ['table consistency validation'](https://www.union.ai/pandera), and storage in .parquet format in a local directory and in ['GCS'](https://cloud.google.com/storage) in the bronze layer, as DataFrames in their original/raw structure, without any modification.<br/>
+The flow begins with data extraction using the [basedosdados SDK](https://basedosdados.org), organization and [table consistency validation](https://www.union.ai/pandera), and storage in .parquet format in a local directory and in [GCS](https://cloud.google.com/storage) in the bronze layer, as DataFrames in their original/raw structure, without any modification.<br/>
 The data collected are at the municipal level and refer to the years 2017 and 2019 for Elementary Education:<br/>
 - Population;<br/>
 - GDP;<br/>
@@ -49,31 +50,31 @@ The tables go through a transformation process, being combined into a single Dat
 - Spending per Student (Education Spending / Number of Enrollments);<br/>
 - % of GDP in Education (Education Spending / GDP);<br/>
 - Data completeness flag by city.<br/>
-The DataFrame undergoes descriptive and correlation analysis and is also ['validated'](https://www.union.ai/pandera) regarding fields and data types, and finally stored in .parquet format in a local directory and in ['GCS'](https://cloud.google.com/storage) in the silver layer.<br/>
+The DataFrame undergoes descriptive and correlation analysis and is also [validated](https://www.union.ai/pandera) regarding fields and data types, and finally stored in .parquet format in a local directory and in [GCS](https://cloud.google.com/storage) in the silver layer.<br/>
 
 3. **Gold Layer**<br/>
 At this stage, the flow starts from the DataFrame saved in the previous step (silver). The data are filtered by the data completeness field, and the relevant fields are extracted and organized into matrices to be modeled.<br/>
 \* The Dropout Rate fields are converted for modeling adjustment since higher dropout rates indicate worse performance. Unlike the original study, which used the ratio '1/rate' for adjustment, this project converts the rate using '100 - rate' base.<br/>
 
-The ['dealib'](https://github.com/ArtyomViryutin/dealib) model is then applied to the matrices, and additional fields are calculated based on the results:<br/>
+The [dealib](https://github.com/ArtyomViryutin/dealib) model is then applied to the matrices, and additional fields are calculated based on the results:<br/>
 - Scale efficiency (Constant Return Input-Oriented / Variable Return Input-Oriented);<br/>
 - Classification of Returns Nature.<br/>
 
-    4. **Additional Metrics**<br/>
-    There is an additional step for calculating metrics used in visual interpretation of the results:<br/>
-    - Annual efficiency ranking;<br/>
-    - Percent variation between periods;<br/>
-    - Classification:<br/>
-        - Technical efficiency classes;<br/>
-        - Scale efficiency classes;<br/>
-    - Variation:<br/>
-        - Comparison with the median technical efficiency of the year;<br/>
-        - Comparison with the median scale efficiency of the year;<br/>
-        - Comparison with the state average technical efficiency of the year;<br/>
-        - Comparison with the state average scale efficiency of the year;<br/>
-    - Clustering by characteristics.<br/>
-The results and additional calculated fields are aggregated into the main DataFrame, which undergoes descriptive and correlation analysis, as well as statistical tests (Normality, Distribution, and t-test), and ['validação'](https://www.union.ai/pandera) regarding fields, values, and data types.<br/>
-The DataFrame, the descriptive summary (both in .parquet format), and the statistical test results (in .json format) are stored in a local directory and in ['GCS'](https://cloud.google.com/storage) in the gold layer.<br/>
+4. **Additional Metrics**<br/>
+There is an additional step for calculating metrics used in visual interpretation of the results:<br/>
+- Annual efficiency ranking;<br/>
+- Percent variation between periods;<br/>
+- Classification:<br/>
+    - Technical efficiency classes;<br/>
+    - Scale efficiency classes;<br/>
+- Variation:<br/>
+    - Comparison with the median technical efficiency of the year;<br/>
+    - Comparison with the median scale efficiency of the year;<br/>
+    - Comparison with the state average technical efficiency of the year;<br/>
+    - Comparison with the state average scale efficiency of the year;<br/>
+- Clustering by characteristics.<br/>
+The results and additional calculated fields are aggregated into the main DataFrame, which undergoes descriptive and correlation analysis, as well as statistical tests (Normality, Distribution, and t-test), and [validação](https://www.union.ai/pandera) regarding fields, values, and data types.<br/>
+The DataFrame, the descriptive summary (both in .parquet format), and the statistical test results (in .json format) are stored in a local directory and in [GCS](https://cloud.google.com/storage) in the gold layer.<br/>
 
 5. ****<br/>
 The municipal geographic polygons are then obtained using geobr
@@ -81,7 +82,7 @@ The municipal geographic polygons are then obtained using geobr
 , consolidating the socioeconomic information centralized in the DataFrame saved in the Gold layer, with the geographic coordinates.<br/>
 
 6. ****<br/>
-With the completion of data processing, the DataFrame is made available for consumption in Business Intelligence tools. For ['illustration'](link powerbi), histograms of the selected variables, a scatter plot between HDI and Tax Burden with a trend line, a correlation heatmap, and a map are displayed.<br/>
+With the completion of data processing, the DataFrame is made available for consumption in Business Intelligence tools. For [illustration](link powerbi), histograms of the selected variables, a scatter plot between HDI and Tax Burden with a trend line, a correlation heatmap, and a map are displayed.<br/>
 
 ## Methods
 ### **CRS** — *Constant Returns to Scale*
@@ -117,10 +118,10 @@ With the completion of data processing, the DataFrame is made available for cons
 | **Subject to:**<br>$$\sum_i v_i x_i \ge x^0 \quad \forall \text{DMUs}$$<br>$$\sum_i v_i y_i = 1$$<br>$$u_i \ge 0, \; v_i \ge 0$$ | **Subject to:**<br>$$\sum_i u_i x_i \ge \theta v \quad \forall \text{DMUs}$$<br>$$\sum_i u_i y_i = 1$$<br>$$u_i \ge 0, \; v_i \ge 0$$ |
 
 ### Notation
-- \( x_i \): input \( i \);<br/>
-- \( y_i \): output \( i \);<br/>
-- \( u_i, v_i \): weights for outputs and inputs;<br/>
-- \( \theta \): efficiency score.<br/>
+- $$x_i$$: input \(i\);<br/>
+- $$y_i$$: output \(i\);<br/>
+- $$u_i, v_i$$: weights for outputs and inputs;<br/>
+- $$\theta$$: efficiency score.<br/>
 
 ## Results
 Extending the study to more municipalities reinforced the results obtained in the original 2023 research. <br/>
