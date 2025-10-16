@@ -30,7 +30,7 @@ Além de reproduzir o modelo econométrico, o projeto implementa uma pipeline mo
 
 ## Código
 1. **Camada Bronze**<br/>
-O fluxo inicia com a extração dos dados em [basedosdados SDK](https://basedosdados.org), organização e [validação de consistencia das tabelas](https://www.union.ai/pandera) e, armazenamento em extensão .parquet em diretório local e [GCS](https://cloud.google.com/storage) na camada bronze, como DataFrames em sua estrutura original/integral, sem qualquer modificação.<br/>
+O fluxo inicia com a extração dos dados em [basedosdados SDK](https://basedosdados.org), organização, [validação de consistencia das tabelas](https://www.union.ai/pandera) e, armazenamento em extensão .parquet em diretório local e [GCS](https://cloud.google.com/storage) na camada bronze, como DataFrames em sua estrutura original/integral, sem qualquer modificação.<br/>
 Os dados coletados são da esfera municipal e se referem aos anos de 2017 e 2019 do Ensino Fundamental:<br/>
 - População;<br/>
 - PIB;<br/>
@@ -54,7 +54,7 @@ O DataFrame passa por análise descritiva e de correlações, e também é [vali
 
 3. **Camada Ouro**<br/>
 Nessa etapa, o fluxo se inicia a partir do DataFrame salvo na etapa anterior (prata). Os dados são filtrados pelo campo de totalidade dos dados, e extraem-se os campos a serem organizados como matrizes que serão modeladas.<br/>
-\* Os campos de Taxa de Abandono têm uma conversão para ajuste na modelagem, uma vez que quanto maior o valor (abandono), pior é o índice. Diferente da pesquisa original, que utilizou a razão '1/taxa' para ajuste, este projeto converte a taxa nas bases '100 - taxa'.<br/>
+\* Os campos de Taxa de Abandono têm uma conversão para ajuste na modelagem, uma vez que quanto maior o valor (abandono), pior é o índice. Diferente da pesquisa original, que utilizou a razão '*1/taxa*' para ajuste, este projeto converte a taxa nas bases '*100 - taxa*'.<br/>
 
 O modelo [dealib](https://github.com/ArtyomViryutin/dealib) é então aplicado nas matrizes; sobre os resultados são calculados campos:<br/>
 - Eficiência de escala (Ret. Constante Orient. Input / Ret. Variável Orient. Input);<br/>

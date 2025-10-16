@@ -10,7 +10,7 @@
 
 ### Improvements
 - Expand the study to all possible municipalities;<br/>
-- Deepen the analyses;<br/>
+- Deepen the analysis;<br/>
 - Include a data visualization dashboard;<br/>
 - Document and publish.<br/>
 
@@ -20,7 +20,7 @@
 - [Pipeline and Architecture](#code)
 - [DEA Modeling](#methods)
 - [Results](#results)
-- [Paper and References](https://github.com/puffdapaz/DEApython/blob/main/docs/Eficiência%20dos%20gastos%20públicos%20com%20educação%20nos%20municípios%20baianos.pdf)
+- [Paper and References (pt_BR)](https://github.com/puffdapaz/DEApython/blob/main/docs/Eficiência%20dos%20gastos%20públicos%20com%20educação%20nos%20municípios%20baianos.pdf)
 - [How to replicate the repository](https://github.com/puffdapaz/DEApython/blob/main/SETUP.en-US.md)
 
 ## Project
@@ -30,7 +30,7 @@ In addition to reproducing the econometric model, the project implements a modul
 
 ## Code
 1. **Bronze Layer**<br/>
-The flow begins with data extraction using the [basedosdados SDK](https://basedosdados.org), organization and [table consistency validation](https://www.union.ai/pandera), and storage in .parquet format in a local directory and in [GCS](https://cloud.google.com/storage) in the bronze layer, as DataFrames in their original/raw structure, without any modification.<br/>
+The flow begins with data extraction using the [basedosdados SDK](https://basedosdados.org), organization, [table consistency validation](https://www.union.ai/pandera), and storage in .parquet format in a local directory and in [GCS](https://cloud.google.com/storage) in the bronze layer, as DataFrames in their original/raw structure, without any modification.<br/>
 The data collected are at the municipal level and refer to the years 2017 and 2019 for Elementary Education:<br/>
 - Population;<br/>
 - GDP;<br/>
@@ -54,7 +54,7 @@ The DataFrame undergoes descriptive and correlation analysis and is also [valida
 
 3. **Gold Layer**<br/>
 At this stage, the flow starts from the DataFrame saved in the previous step (silver). The data are filtered by the data completeness field, and the relevant fields are extracted and organized into matrices to be modeled.<br/>
-\* The Dropout Rate fields are converted for modeling adjustment since higher dropout rates indicate worse performance. Unlike the original study, which used the ratio '1/rate' for adjustment, this project converts the rate using '100 - rate' base.<br/>
+\* The Dropout Rate fields are converted for modeling adjustment since higher dropout rates indicate worse performance. Unlike the original study, which used the ratio '*1/rate*' for adjustment, this project converts the rate using '*100 - rate*' base.<br/>
 
 The [dealib](https://github.com/ArtyomViryutin/dealib) model is then applied to the matrices, and additional fields are calculated based on the results:<br/>
 - Scale efficiency (Constant Return Input-Oriented / Variable Return Input-Oriented);<br/>
@@ -130,6 +130,8 @@ Extending the study to more municipalities reinforced the results obtained in th
 >Improving spending management involves not only investing in education but ensuring equity in opportunities."
 
 Statistical tests show three main conclusions: scale efficiency data do not follow a normal distribution (Shapiro–Wilk test, p < 10⁻⁴¹), the mean scale efficiency is significantly different from 1 (t-test, p = 0.0), and the distributions between CRS/VRS and IRS/DRS are significantly different (Kolmogorov–Smirnov test, p < 10⁻⁴³). The very low p-values (< 0.05) indicate high confidence that these differences are statistically significant.<br/>
+
 On average, municipalities showed a slight increase in GDP, education spending, and GDP per capita by 2019, as well as improvements in IDEB scores and reduced dropout rates. DEA efficiency scores remained relatively stable, with VRS efficiency around 0.52 in 2019, indicating moderate resource-use efficiency.<br/>
-Correlations show that higher **percentages of education spending relative to GDP** are **strongly associated with better DEA efficiency scores**, while dropout rates correlate negatively with IDEB.<br/>
-Municipalities with higher GDP per capita or spending per student tend to have better educational outcomes, **but not necessarily higher efficiency, suggesting disparities in resource allocation.** Scale efficiency improved slightly, although many municipalities still operate below the optimal scale.<br/>
+
+Correlations show that higher ***percentages of education spending relative to GDP*** are ***strongly associated with better DEA efficiency scores***, while dropout rates correlate negatively with IDEB.<br/>
+Municipalities with higher GDP per capita or spending per student tend to have better educational outcomes, ***but not necessarily higher efficiency, suggesting disparities in resource allocation.*** Scale efficiency improved slightly, although many municipalities still operate below the optimal scale.<br/>
