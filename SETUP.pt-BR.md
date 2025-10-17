@@ -30,17 +30,19 @@ No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
 - No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
 Navegue até a pasta do seu projeto:<br/>
 `cd endereço/diretório/pasta/`<br/>
+
 Crie um ambiente virtual chamado venv:<br/>
 `python -m venv venv`<br/>
+
 Ative o ambiente virtual: <br/>
 No Windows: `.\venv\Scripts\activate`<br/>
 No macOS/Linux: `source venv/bin/activate`<br/>
 
 ### 5. Configurar Variáveis de Ambiente
-- Criação de arquivo `.env` no diretório raiz,contendo parâmetros para:<br/>
-Conta GCS para armazenamento: billing_project_id=seu_projeto_no_gcp<br/>
-Bucket GCS para armazenamento: gcp_bucket_name=seu_bucket_gcs<br/>
-Referência para credenciais: google_application_credentials=credentials/gcp_key.json<br/>
+- Criação de arquivo `.env` no diretório raiz, contendo parâmetros:<br/>
+  - Conta GCS para armazenamento: `billing_project_id=seu_projeto_no_gcp`<br/>
+  - Bucket GCS para armazenamento: `gcp_bucket_name=seu_bucket_gcs`<br/>
+  - Referência para credenciais: `google_application_credentials=credentials/gcp_key.json`<br/>
 
 ### 6. Instalação das dependências
 - No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
