@@ -55,33 +55,35 @@ ou<br/>
 ### 8. Estrutura Esperada do Projeto
 Após a execução bem-sucedida, sua pasta deve conter:<br/>
 
-DEApython/<br/>
-├── configs/                  # Arquivos YAML com parâmetros<br/>
-├── credentials/              # gcp_key.json (necessario criar)<br/>
-├── docs/                     # Artigo original<br/>
-├── data/                     # Dados tratados (gerados automaticamente)<br/>
-│   ├── bronze/               # Dados brutos<br/>
-│   ├── silver/               # Dados processados<br/>
-│   └── gold/                 # Resultados finais<br/>
-├── etl/                      # Código do pipeline ETL<br/>
-│   ├── bronze_ingestion.py   # Fluxo de Ingestão<br/>
-│   ├── silver_processing.py  # Fluxo de Processamento<br/>
-│   ├── gold_modeling.py      # Fluxo de Modelagem<br/>
-│   ├── dash_metrics.py       # Fluxo de Métricas<br/>
-│   ├── diagnostics/          # Funções de Validação e Diagnóstico<br/>
-│   └── save_utils/           # Funções de Armazenamento<br/>
-├── .env                      # Variáveis de Ambiente (necessário criar)<br/>
-├── .gitignore                # Filtro de arquivos repositório<br/>
-├── CITATION.cff              # Citações e Créditos<br/>
-├── main.py                   # Ponto de entrada do projeto<br/>
-├── project_diagram.md        # Diagrama do fluxo do projeto<br/>
-├── pyproject.toml            # Premissas e condições<br/>
-├── README.en-US.md           # Descrição do Projeto (en_US)<br/>
-├── README.md                 # Opção para linguagem da Descrição<br/>
-├── README.pt-BR.md           # Descrição do Projeto (pt_BR)<br/>
-├── requirements.txt          # Dependências do projeto<br/>
-├── SETUP.en-US.md            # Instruções para Instalação (en_US)<br/>
-├── SETUP.md                  # Opção para linguagem da Instruções<br/>
-└── SETUP.pt-BR.md            # Instruções para Instalação (pt_BR)<br/>
+```
+DEApython/
+├── configs/                  # Arquivos YAML com parâmetros
+├── credentials/              # gcp_key.json (necessario criar)
+├── docs/                     # Artigo original
+├── data/                     # Dados tratados (gerados automaticamente)
+│   ├── bronze/               # Dados brutos
+│   ├── silver/               # Dados processados
+│   └── gold/                 # Resultados finais
+├── etl/                      # Código do pipeline ETL
+│   ├── bronze_ingestion.py   # Fluxo de Ingestão
+│   ├── silver_processing.py  # Fluxo de Processamento
+│   ├── gold_modeling.py      # Fluxo de Modelagem
+│   ├── dash_metrics.py       # Fluxo de Métricas
+│   ├── diagnostics/          # Funções de Validação e Diagnóstico
+│   └── save_utils/           # Funções de Armazenamento
+├── .env                      # Variáveis de Ambiente (necessário criar)
+├── .gitignore                # Filtro de arquivos repositório
+├── CITATION.cff              # Citações e Créditos
+├── main.py                   # Ponto de entrada do projeto
+├── project_diagram.md        # Diagrama do fluxo do projeto
+├── pyproject.toml            # Premissas e condições
+├── README.en-US.md           # Descrição do Projeto (en_US)
+├── README.md                 # Opção para linguagem da Descrição
+├── README.pt-BR.md           # Descrição do Projeto (pt_BR)
+├── requirements.txt          # Dependências do projeto
+├── SETUP.en-US.md            # Instruções para Instalação (en_US)
+├── SETUP.md                  # Opção para linguagem da Instruções
+└── SETUP.pt-BR.md            # Instruções para Instalação (pt_BR)
+```
 
 Há arquivo [README](https://github.com/puffdapaz/DEApython/blob/main/README.pt-BR.md) com suporte adicional. Não hesite em pedir ajuda.<br/>

@@ -55,33 +55,35 @@ or<br/>
 ### 8. Expected Project Structure
 After successful execution, your folder should contain:<br/>
 
-DEApython/<br/>
-├── configs/                  # YAML files with parameters<br/>
-├── credentials/              # gcp_key.json (need to create)<br/>
-├── docs/                     # Original paper<br/>
-├── data/                     # Organized data (automatically generated)<br/>
-│   ├── bronze/               # Raw data<br/>
-│   ├── silver/               # Processed data<br/>
-│   └── gold/                 # Final results<br/>
-├── etl/                      # ETL pipeline code<br/>
-│   ├── bronze_ingestion.py   # Ingestion Flow<br/>
-│   ├── silver_processing.py  # Processing Flow<br/>
-│   ├── gold_modeling.py      # Modeling Flow<br/>
-│   ├── dash_metrics.py       # Metrics Flow<br/>
-│   ├── diagnostics/          # Validation and Diagnostic Functions<br/>
-│   └── save_utils/           # Storage Functions<br/>
-├── .env                      # Environment Variables (need to create)<br/>
-├── .gitignore                # Repository file filter<br/>
-├── CITATION.cff              # Citations and Credits<br/>
-├── main.py                   # Project entrypoint<br/>
-├── project_diagram.md        # Project diagram flow<br/>
-├── pyproject.toml            # Premises and conditions<br/>
-├── README.en-US.md           # Project Description (en_US)<br/>
-├── README.md                 # Language option for Description<br/>
-├── README.pt-BR.md           # Project Description (pt_BR)<br/>
-├── requirements.txt          # Project dependencies<br/>
-├── SETUP.en-US.md            # Installation Instructions (en_US)<br/>
-├── SETUP.md                  # Language option for Instructions<br/>
-└── SETUP.pt-BR.md            # Installation Instructions (pt_BR)<br/>
+```
+DEApython/
+├── configs/                  # YAML files with parameters
+├── credentials/              # gcp_key.json (need to create)
+├── docs/                     # Original paper
+├── data/                     # Organized data (automatically generated)
+│   ├── bronze/               # Raw data
+│   ├── silver/               # Processed data  
+│   └── gold/                 # Final results
+├── etl/                      # ETL pipeline code
+│   ├── bronze_ingestion.py   # Ingestion Flow
+│   ├── silver_processing.py  # Processing Flow
+│   ├── gold_modeling.py      # Modeling Flow
+│   ├── dash_metrics.py       # Metrics Flow
+│   ├── diagnostics/          # Validation and Diagnostic Functions
+│   └── save_utils/           # Storage Functions
+├── .env                      # Environment Variables (need to create)
+├── .gitignore                # Repository file filter
+├── CITATION.cff              # Citations and Credits
+├── main.py                   # Project entrypoint
+├── project_diagram.md        # Project diagram flow
+├── pyproject.toml            # Premises and conditions
+├── README.en-US.md           # Project Description (en_US)
+├── README.md                 # Language option for Description
+├── README.pt-BR.md           # Project Description (pt_BR)
+├── requirements.txt          # Project dependencies
+├── SETUP.en-US.md            # Installation Instructions (en_US)
+├── SETUP.md                  # Language option for Instructions
+└── SETUP.pt-BR.md            # Installation Instructions (pt_BR)
+```
 
 There is [README](https://github.com/puffdapaz/DEApython/blob/main/README.en-US.md) file with additional support. Do not hesitate to ask for help.<br/>
