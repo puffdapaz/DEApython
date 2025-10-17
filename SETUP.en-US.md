@@ -13,43 +13,47 @@
 
 ### 2. Install python 3.9 or newer
 - Download at official site: [python.org/downloads](https://www.python.org/downloads/)<br/>
-- **Important**: When installing, check the option **"Add python to PATH"**
+- **Important**: When installing, check the option **"Add python to PATH"**<br/>
 - Check installation after completing:<br/>
-  `bash
-  python --version
-  pip --version`
+In command prompt (Windows) or Terminal (macOS/Linux) type:<br/>
+  `bash`<br/>
+  `python --version`<br/>
+  `pip --version`<br/>
 
 ### 3. Clone the repository
 In command prompt (Windows) or Terminal (macOS/Linux) type:<br/>
-  `bash
-  git clone https://github.com/puffdapaz/DEApython.git
-  cd DEApython`
+  `bash`<br/>
+  `git clone https://github.com/puffdapaz/DEApython.git`<br/>
+  `cd DEApython`<br/>
 
 ### 4. Set up a virtual environment
-Open command prompt (Windows) or Terminal (macOS/Linux). <br/>
-Navigate to your project folder: cd address/directory/folder/ <br/>
-Create a virtual environment called venv: **_python -m venv venv_** <br/>
+In command prompt (Windows) or Terminal (macOS/Linux) type:<br/>
+Navigate to your project folder:<br/>
+`cd address/directory/folder/`<br/>
+Create a virtual environment called venv:<br/>
+`python -m venv venv` <br/>
 Activate the virtual environment: <br/>
-    On Windows: **_.\venv\Scripts\activate_**<br/>
-    On macOS/Linux: **_source venv/bin/activate_**<br/>
+    On Windows: `.\venv\Scripts\activate`<br/>
+    On macOS/Linux: `source venv/bin/activate`<br/>
 
 ### 5. Configure Environment Variables
-Create `.env` file in root directory, containing parameters for:
-  GCS account for storage: billing_project_id=your_gcp_project
-  GCS bucket for storage: gcp_bucket_name=your_gcs_bucket
-  Reference for credentials: google_application_credentials=credentials/gcp_key.json
+Create `.env` file in root directory, containing parameters for:<br/>
+  GCS account for storage: billing_project_id=your_gcp_project<br/>
+  GCS bucket for storage: gcp_bucket_name=your_gcs_bucket<br/>
+  Reference for credentials: google_application_credentials=credentials/gcp_key.json<br/>
 
 ### 6. Install dependencies
 In command prompt (Windows) or Terminal (macOS/Linux) type:<br/>
 `pip install .`<br/>
-or `pip install -r requirements.txt`
+or<br/>
+`pip install -r requirements.txt`<br/>
 
 ### 7. Running the code
 In command prompt (Windows) or Terminal (macOS/Linux) type:<br/>
 `python main.py`<br/>
 
 ### 8. Expected Project Structure
-After successful execution, your folder should contain:
+After successful execution, your folder should contain:<br/>
 
 DEApython/
 ├── configs/                  # YAML files with parameters

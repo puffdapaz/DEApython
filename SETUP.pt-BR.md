@@ -13,43 +13,47 @@
 
 ### 2. Instalar python 3.9 ou superior
 - Baixe no site oficial: [python.org/downloads](https://www.python.org/downloads/)<br/>
-- **Importante**: Durante a instalação, marque a opção **"Add python to PATH"**
+- **Importante**: Durante a instalação, marque a opção **"Add python to PATH"**<br/>
 - Verifique a instalação após concluir:<br/>
-  `bash
-  python --version
-  pip --version`
+No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
+  `bash`<br/>
+  `python --version`<br/>
+  `pip --version`<br/>
 
 ### 3. Clonar o repositório
 No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
-  `bash
-  git clone https://github.com/puffdapaz/DEApython.git
-  cd DEApython`
+  `bash`<br/>
+  `git clone https://github.com/puffdapaz/DEApython.git`<br/>
+  `cd DEApython`<br/>
 
 ### 4. Configurar um ambiente virtual
-Abra o prompt de comando (Windows) ou Terminal (macOS/Linux). <br/>
-Navegue até a pasta do seu projeto: cd endereço/diretório/pasta/ <br/>
-Crie um ambiente virtual chamado venv: **_python -m venv venv_** <br/>
+No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
+Navegue até a pasta do seu projeto:<br/>
+`cd endereço/diretório/pasta/`<br/>
+Crie um ambiente virtual chamado venv:<br/>
+`python -m venv venv`<br/>
 Ative o ambiente virtual: <br/>
-    No Windows: **_.\venv\Scripts\activate_**<br/>
-    No macOS/Linux: **_source venv/bin/activate_**<br/>
+    No Windows: `.\venv\Scripts\activate`<br/>
+    No macOS/Linux: `source venv/bin/activate`<br/>
 
 ### 5. Configurar Variáveis de Ambiente
-Criação de arquivo `.env` no diretório raiz,contendo parâmetros para:
-  Conta GCS para armazenamento: billing_project_id=seu_projeto_no_gcp
-  Bucket GCS para armazenamento: gcp_bucket_name=seu_bucket_gcs
-  Referência para credenciais: google_application_credentials=credentials/gcp_key.json
+Criação de arquivo `.env` no diretório raiz,contendo parâmetros para:<br/>
+  Conta GCS para armazenamento: billing_project_id=seu_projeto_no_gcp<br/>
+  Bucket GCS para armazenamento: gcp_bucket_name=seu_bucket_gcs<br/>
+  Referência para credenciais: google_application_credentials=credentials/gcp_key.json<br/>
 
 ### 6. Instalação das dependências
 No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
 `pip install .`<br/>
-ou `pip install -r requirements.txt`
+ou<br/>
+`pip install -r requirements.txt`<br/>
 
 ### 7. Executando o código
 No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
 `python main.py`<br/>
 
 ### 8. Estrutura Esperada do Projeto
-Após a execução bem-sucedida, sua pasta deve conter:
+Após a execução bem-sucedida, sua pasta deve conter:<br/>
 
 DEApython/
 ├── configs/                  # Arquivos YAML com parâmetros
