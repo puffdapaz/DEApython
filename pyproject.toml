@@ -5,22 +5,28 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "DEApython"
 version = "0.1.0"
-description = "Data Envelopment Analysis for educational performance evaluation"
-authors = [
-  { name = "Pedro Silva", email = "silvapedro@outlook.com" }
-]
-requires-python = ">=3.8"
-
-[dependencies]
-python = ">=3.8"
-pandas = "^1.5"
-numpy = "^1.24"
-scipy = "^1.7"
-dealib = "^1.0"
-basedosdados = "^2.0"
-pyyaml = "^6.0"
-python-dotenv = "^1.0"
-pandera = {extras = ["pandas"], version = "^0.20.0" }
+description = "Pipeline and Data Envelopment Analysis using public education data from Brazil"
+authors = [{ name = "Pedro Silva", email = "silvapedro@outlook.com" }]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["basedosdados",
+                "dealib",
+                "dotenv",
+                "google-cloud-storage",
+                "numpy",
+                "pandas",
+                "pandera",
+                "pyarrow",
+                "PyYAML",
+                "requests",
+                "scipy",
+                "tomlkit",
+                "typing_extensions"]
 
 [scripts]
 deapipeline = "main:main"
+
+[project.urls]
+dashboard = "pbi link"
+repository = "https://github.com/puffdapaz/DEApython"

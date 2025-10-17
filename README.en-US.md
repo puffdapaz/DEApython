@@ -124,11 +124,12 @@ With the completion of data processing, the DataFrame is made available for cons
 - $$\theta$$: efficiency score.<br/>
 
 ## Results
-Extending the study to more municipalities reinforced the results obtained in the original 2023 research. <br/>
+Extending the study to more municipalities reinforced the results obtained in the original research in 2023.<br/>
 >"... Excellence in input management does not necessarily mean increasing investment per student or the overall budget, but rather seeking the least possible use of resources while aiming for social well-being; it is up to decision-makers to continuously apply themselves, regardless of favorable scenarios, respecting socioeconomic demands and ensuring basic access conditions for students.
 ><br/>
 >Improving spending management involves not only investing in education but ensuring equity in opportunities."
 
+Only 52% of the municipalities presented all the information in the time frame, composing the sample (2891 cities).
 Statistical tests show three main conclusions: scale efficiency data do not follow a normal distribution (Shapiro–Wilk test, p < 10⁻⁴¹), the mean scale efficiency is significantly different from 1 (t-test, p = 0.0), and the distributions between CRS/VRS and IRS/DRS are significantly different (Kolmogorov–Smirnov test, p < 10⁻⁴³). The very low p-values (< 0.05) indicate high confidence that these differences are statistically significant.<br/>
 
 On average, municipalities showed a slight increase in GDP, education spending, and GDP per capita by 2019, as well as improvements in IDEB scores and reduced dropout rates. DEA efficiency scores remained relatively stable, with VRS efficiency around 0.52 in 2019, indicating moderate resource-use efficiency.<br/>

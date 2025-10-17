@@ -122,11 +122,12 @@ Com a finalização do tratamento dos dados, o DataFrame é disponibilizado para
 - $$\theta$$: escore de eficiência.<br/>
 
 ## Resultados
-A extensão do estudo a mais municípios reforçou os resultados obtidos na pesquisa original em 2023. <br/>
+A extensão do estudo a mais municípios reforçou os resultados obtidos na pesquisa original em 2023.<br/>
 >"... A excelência na gestão dos insumos, não significa em incrementar o investimento por aluno ou o orçamento como um todo, mas também na busca pela menor utilização possível de recursos, visando o bem-estar social; cabe aos responsáveis e tomadores de decisão se aplicarem continuamente, independente de cenários favoráveis, respeitando as demandas socioeconômicas e propiciando condições básicas de acesso aos estudantes.
 ><br/>
 >O aprimoramento no gerenciamento dos gastos passa não somente por investimento em educação, mas em assegurar equidade nas oportunidades."
 
+Somente 52% dos municípios apresentou todas as informações no recorte temporal, compondo a amostra (2891 municípios).
 Os testes estatísticos mostram três conclusões principais: os dados de eficiência de escala não seguem distribuição normal (teste de Shapiro-Wilk, p < 10⁻⁴¹), a média da eficiência de escala é significativamente diferente de 1 (teste t, p = 0.0), e as distribuições entre CRS/VRS e IRS/DRS são significativamente diferentes (teste de Kolmogorov-Smirnov, p < 10⁻⁴³). Os p-valores muito baixos (< 0,05) indicam alta confiança de que essas diferenças são estatisticamente significativas.<br/>
 
 Em média, os municípios apresentaram leve aumento no PIB, gastos em educação e PIB per capita até 2019, bem como, melhorias nos índices do IDEB e redução nas taxas de evasão. Os escores de eficiência DEA mantiveram-se relativamente estáveis, com a eficiência VRS em torno de 0,52 em 2019, indicando eficiência moderada no uso de recursos. <br/>
