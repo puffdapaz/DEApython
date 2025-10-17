@@ -16,15 +16,15 @@
 - **Importante**: Durante a instalação, marque a opção **"Add python to PATH"**<br/>
 - Verifique a instalação após concluir:<br/>
 No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
-  `bash`<br/>
-  `python --version`<br/>
-  `pip --version`<br/>
+`bash`<br/>
+`python --version`<br/>
+`pip --version`<br/>
 
 ### 3. Clonar o repositório
 No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
-  `bash`<br/>
-  `git clone https://github.com/puffdapaz/DEApython.git`<br/>
-  `cd DEApython`<br/>
+`bash`<br/>
+`git clone https://github.com/puffdapaz/DEApython.git`<br/>
+`cd DEApython`<br/>
 
 ### 4. Configurar um ambiente virtual
 No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
