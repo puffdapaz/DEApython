@@ -61,6 +61,7 @@ classDef external fill:#E6F3FF,stroke:#0066CC,stroke-width:3px,color:#000000,fon
   %% ======================
   ANALYTICS[Analytical features<br/>📈]
   STORAGE[(Storage<br/>💾)]
+  MAPS[Geographic features<br/>🗺️]
 
   %% ======================
   %% Connections (data flow)
@@ -73,14 +74,11 @@ classDef external fill:#E6F3FF,stroke:#0066CC,stroke-width:3px,color:#000000,fon
 
   CFG --> S_TRANSFORM
   ENV --> S_TRANSFORM
-
-  S_TRANSFORM --> S_FLAGS --> S_VALIDATE --> S_SAVE --> G_PREP
+  S_TRANSFORM --> S_FLAGS --> MAPS --> S_VALIDATE --> S_SAVE --> G_PREP
 
   CFG --> G_PREP
   ENV --> G_PREP
-  G_DIAG --> ANALYTICS
-  ANALYTICS --> G_SAVE
-  G_PREP --> G_DEA --> G_VALIDATE --> G_DIAG
+  G_PREP --> G_DEA --> G_VALIDATE --> G_DIAG --> ANALYTICS --> G_SAVE
 
   B_SAVE --> STORAGE
   S_SAVE --> STORAGE
@@ -94,6 +92,7 @@ classDef external fill:#E6F3FF,stroke:#0066CC,stroke-width:3px,color:#000000,fon
   class B_VALIDATE,S_VALIDATE,G_VALIDATE validation;
   class B_SAVE,S_SAVE,G_SAVE storage;
   class STORAGE storage;
+  class MAPS silver;
   class ANALYTICS,G_DIAG gold;
   class BRONZE bronze;
   class SILVER silver;
