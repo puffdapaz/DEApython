@@ -12,6 +12,7 @@ from typing import List, Optional
 from pathlib import Path
 from dotenv import load_dotenv
 from .save_utils import save as save
+from .geodata import fetch_geodata, merge_geodata
 from .diagnostics.data_validation import silver_schema, validate_data
 from .diagnostics.model_diagnostics import analyze_data
 
@@ -185,6 +186,9 @@ def process_silver_data() -> Optional[bd.Table]:
                          'spending_per_student']
         silver_df = add_completeness_flags(silver_df,
                                            value_columns)
+
+        geo_df = fetch_geodata(year=2017)
+        silver_df = merge_geodata(silver_df, geo_df)
 
         validate_silver(silver_df)
         analyze_data(silver_df,

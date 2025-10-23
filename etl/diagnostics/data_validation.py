@@ -90,6 +90,7 @@ silver_schema = DataFrameSchema({
     "gdp_per_capita": Column(float, nullable=True, checks=Check.ge(0)),
     "spending_per_student": Column(float, nullable=True, checks=Check.ge(0)),
     "educ_pct_gdp": Column(float, nullable=True, checks=Check.between(0, 100)),
+#    "geometry": Column(object, nullable=True), Special Object type for geometries
     "is_complete_grouped": Column(bool, nullable=False),
 })
 
@@ -112,6 +113,7 @@ gold_schema = DataFrameSchema({
     "gdp_per_capita": Column(float, nullable=True, checks=Check.ge(0)),
     "spending_per_student": Column(float, nullable=True, checks=Check.ge(0)),
     "educ_pct_gdp": Column(float, nullable=True, checks=Check.between(0, 100)),
+#    "geometry": Column(object, nullable=True), Special Object type for geometries
     "is_complete_grouped": Column(bool, nullable=False),
     "DEA_crs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_crs_output": Column(float, nullable=True, checks=Check.between(0, 1)),

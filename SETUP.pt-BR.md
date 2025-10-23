@@ -31,10 +31,10 @@ No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
 Navegue até a pasta do seu projeto:<br/>
 `cd endereço/diretório/pasta/`<br/>
 
-Crie um ambiente virtual chamado venv:<br/>
+- Crie um ambiente virtual chamado venv:<br/>
 `python -m venv venv`<br/>
 
-Ative o ambiente virtual: <br/>
+- Ative o ambiente virtual: <br/>
 No Windows: `.\venv\Scripts\activate`<br/>
 No macOS/Linux: `source venv/bin/activate`<br/>
 

@@ -1,5 +1,8 @@
-**Alt Text for Diagram:**
-"End-to-end data pipeline diagram showing ingestion (Bronze), processing (Silver), and DEA modeling (Gold) layers. Each layer performs extract, transform, validate, and save steps, with configurations, environment variables, and schema validation integrated at each stage. Outputs are stored locally and in Google Cloud Storage and visualized via analytical dashboards."
+**Alt Text:**
+"End-to-end data pipeline diagram showing ingestion (Bronze), processing (Silver), and DEA modeling (Gold) layers. Each layer performs extract, transform and save steps, with configurations, environment variables, and schema validation integrated at each stage. Outputs are stored locally and in Google Cloud Storage and visualized via analytical dashboards."
+
+**Texto Alternativo:**
+"Diagrama do pipeline de dados ponta-a-ponta mostrando camadas de ingestão (Bronze), processamento (Silver) e modelagem DEA (Gold). Cada camada executa etapas de extração, transformação, e armazenamento, com configurações, variáveis ​​de ambiente e validação de esquema integradas em cada estágio. As saídas são armazenadas localmente e no Google Cloud Storage e visualizadas por meio de painéis analíticos."
 ```mermaid
 flowchart TB
   %% ======================
