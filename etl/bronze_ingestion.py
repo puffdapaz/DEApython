@@ -30,7 +30,7 @@ def load_configs(config_path: str = "configs/path.yml") -> dict:
     Returns:
         Dict containing configuration parameters
     Raises:
-        Exception: For other unexpected errors during file reading
+        Exception: For other unexpected errors
     """
     try:
         with open(config_path, "r") as f:

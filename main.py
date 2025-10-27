@@ -1,6 +1,7 @@
 from etl import bronze_ingestion
 from etl import silver_processing
 from etl import gold_modeling
+from etl.save_utils.load_to_db import load_to_neon
 
 def main():
     """
@@ -22,7 +23,11 @@ def main():
         
         # Step 3: Gold DEA Model
         print("Applying model...")
-        gold_modeling.model_gold_data()
+        dea_data = gold_modeling.model_gold_data()
+        
+        # Step 4: Load to DataWarehouse
+        print("Loading data...")
+        load_to_neon(dea_data)
 
         print("DEApython pipeline finished!")
     except Exception as e:
