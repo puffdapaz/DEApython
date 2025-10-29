@@ -69,7 +69,7 @@ def load_gold_data() -> pd.DataFrame:
         df_full = pd.read_parquet("data/processed/silver/silver_data.parquet")
         return df_full
     except Exception as e:
-        logger.error("Error loading data: %s", e)
+        logger.error(f"Error loading data: {e}")
         raise
 
 # ---------------------------------------------------------------------
@@ -85,10 +85,14 @@ def use_completeness_flags(df_full: pd.DataFrame) -> pd.DataFrame:
     Raises:
         ValueError: If no complete cases are found
     """
-    df_complete = df_full[df_full["is_complete_grouped"] == True]
-    if df_complete.empty:
-        raise ValueError("No complete cases found in dataset")
-    return df_complete
+    try:
+        df_complete = df_full[df_full["is_complete_grouped"] == True]
+        if df_complete.empty:
+            raise ValueError("No complete cases found in dataset")
+        return df_complete
+    except Exception as e:
+        logger.error(f"Error filtering data: {e}")
+        raise
 
 def prepare_matrices(subset: pd.DataFrame)-> Tuple[np.ndarray, np.ndarray]:
     """
@@ -112,7 +116,7 @@ def prepare_matrices(subset: pd.DataFrame)-> Tuple[np.ndarray, np.ndarray]:
                        abandono_finais])
         return X, Y
     except Exception as e:
-            logger.error("Error preparing DEA matrices: %s", e)
+            logger.error(f"Error preparing DEA matrices: {e}")
             raise
 
 # ---------------------------------------------------------------------
@@ -140,7 +144,7 @@ def run_dea_models(X: np.ndarray,
         dea_results["drs_input"] = dea(X, Y, rts=RTS.drs, orientation=Orientation.input).eff
         return dea_results
     except Exception as e:
-        logger.error("Error running DEA models: %s", e)
+        logger.error(f"Error running DEA models: {e}")
         raise
 
 def derived_metrics(subset: pd.DataFrame,
@@ -168,7 +172,7 @@ def derived_metrics(subset: pd.DataFrame,
         result_df["DEA_returns_nature"] = returns_nature
         return result_df
     except Exception as e:
-        logger.error("Error calculating derived metrics: %s", e)
+        logger.error(f"Error calculating derived metrics: {e}")
         raise
 
 def results_wrapper(df_full: pd.DataFrame,
@@ -193,7 +197,7 @@ def results_wrapper(df_full: pd.DataFrame,
         gold_df["city_id"] = gold_df["city_id"].astype(str)
         return gold_df
     except Exception as e:
-        logger.error("Error merging DEA results: %s", e)
+        logger.error(f"Error merging DEA results: {e}")
         raise
 
 def run_gold_model(df_full: pd.DataFrame) -> List[pd.DataFrame]:
@@ -206,22 +210,26 @@ def run_gold_model(df_full: pd.DataFrame) -> List[pd.DataFrame]:
     Raises:
         Exception: For other unexpected errors
     """
-    df_complete = use_completeness_flags(df_full)
-    results = []
-    
-    for year, year_data in df_complete.groupby("year"):
-        print(f"Running DEA for {year}")  
-        try:
-            X, Y = prepare_matrices(year_data)
-            dea_results = run_dea_models(X, Y)
-            year_results = derived_metrics(year_data, dea_results)
-            results.append(year_results)
-        except Exception as e:
-                logger.error("DEA failed for year %d: %s", year, e)
-                raise
-    results_df = pd.concat(results, ignore_index=True)
-    gold_df = results_wrapper(df_full, results_df)
-    return gold_df
+    try:
+        df_complete = use_completeness_flags(df_full)
+        results = []
+        
+        for year, year_data in df_complete.groupby("year"):
+            print(f"Running DEA for {year}")  
+            try:
+                X, Y = prepare_matrices(year_data)
+                dea_results = run_dea_models(X, Y)
+                year_results = derived_metrics(year_data, dea_results)
+                results.append(year_results)
+            except Exception as e:
+                    logger.error("DEA failed for year %d: %s", year, e)
+                    raise
+        results_df = pd.concat(results, ignore_index=True)
+        gold_df = results_wrapper(df_full, results_df)
+        return gold_df
+    except Exception as e:
+        logger.error(f"Error running model: {e}")
+        raise
 
 # ---------------------------------------------------------------------
 # Validation, Diagnostics & Saving
@@ -253,7 +261,7 @@ def run_diagnostics(gold_df: pd.DataFrame) -> None:
         md.run_diagnostics(gold_df,
                            log=True)
     except Exception as e:
-        logger.error("Error during gold data diagnostics: %s", e)
+        logger.error(f"Error during gold data diagnostics: {e}")
         raise
 
 def save_gold(gold_df: pd.DataFrame,
@@ -265,19 +273,24 @@ def save_gold(gold_df: pd.DataFrame,
         gold_df dataFrame: Silver DataFrame.
         paths dict: Dictionary with local paths and layers.
         bucket_name str: GCP bucket name.
+    Raises:
+        Exception: For other unexpected errors.
     """
-    local_path = Path(paths["paths"]["gold"])
-    layer = paths["layers"]["gold"]
-    local_path.mkdir(parents=True,
-                     exist_ok=True)
-    save.save_data(gold_df,
-                   "gold_data",
-                   directory=local_path)
-    save.save_data_to_gcs(gold_df,
-                          "gold_data",
-                          bucket_name,
-                          layer=layer)
-    logger.info(f"Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
+    try:
+        local_path = Path(paths["paths"]["gold"])
+        layer = paths["layers"]["gold"]
+        local_path.mkdir(parents=True,
+                         exist_ok=True)
+        save.save_data(gold_df,
+                       "gold_data",
+                       directory=local_path)
+        save.save_data_to_gcs(gold_df,
+                              "gold_data",
+                              bucket_name,
+                              layer=layer)
+        logger.info(f"Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
+    except Exception as e:
+                logger.error(f"Error saving {layer}: {e}")
 
 # ---------------------------------------------------------------------
 # Main Workflow Function

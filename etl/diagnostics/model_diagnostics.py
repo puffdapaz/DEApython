@@ -63,17 +63,22 @@ def analyze_data(df: pd.DataFrame,
     Args:
         df: DataFrame to analyze
         dataset_name: Name of the dataset for reporting
+    Raises:
+        Exception: For other unexpected errors
     """
-    if df is None:
-        logger.warning(f"No DataFrame provided for {name} analysis.")
-        return
-    print(f"{name} data analysis:")
-    for year in sorted(df['year'].unique()):
-        year_data = df[df['year'] == year]
-        print(year, f"{name} records:", len(year_data))
-        print("\n%s", year_data.describe().to_string())
-        print("\n%s", year_data.corr(numeric_only=True).to_string())
-
+    try:
+        if df is None:
+            logger.warning(f"No DataFrame provided for {name} analysis.")
+            return
+        print(f"{name} data analysis:")
+        for year in sorted(df['year'].unique()):
+            year_data = df[df['year'] == year]
+            print(year, f"{name} records:", len(year_data))
+            print("\n%s", year_data.describe().to_string())
+            print("\n%s", year_data.corr(numeric_only=True).to_string())
+    except Exception as e:
+        logger.error(f"Error analyzing data: {e}")
+        raise
 # ---------------------------------------------------------------------
 # Statistical Tests
 # ---------------------------------------------------------------------
@@ -93,7 +98,7 @@ def shapiro_wilk_function(efficiency_scores: np.ndarray,
         - reject_null: Boolean indicating if null hypothesis is rejected
         - interpretation: Human-readable interpretation of results
     Raises:
-        Exception: For other unexpected errors during file reading
+        Exception: For other unexpected errors
     """
     try:
         stat, p_value = stats.shapiro(efficiency_scores)
@@ -122,7 +127,7 @@ def kolmogorov_smirnov_function(sample1: np.ndarray,
     Returns:
         Dict containing test results with interpretation
     Raises:
-        Exception: For other unexpected errors during file reading
+        Exception: For other unexpected errors 
     """
     try:
         stat, p_value = stats.ks_2samp(sample1, sample2)
@@ -149,7 +154,7 @@ def scale_efficiency_function(scale_efficiencies: np.ndarray,
     Returns:
         Dict containing test results with mean efficiency
     Raises:
-        Exception: For other unexpected errors during file reading
+        Exception: For other unexpected errors
     """
     try:
         t_stat, p_value = stats.ttest_1samp(scale_efficiencies, 1.0)
@@ -166,96 +171,6 @@ def scale_efficiency_function(scale_efficiencies: np.ndarray,
     except Exception as e:
         logger.error(f"Scale efficiency test failed: {e}")
         return {"error": str(e)}
-
-# ---------------------------------------------------------------------
-# Diagnostics Runner
-# ---------------------------------------------------------------------
-def run_diagnostics(gold_df: pd.DataFrame,
-                    *,
-                    log: bool = True,
-                    alpha: float = 0.05) -> tuple[dict, pd.DataFrame]:
-    """
-    Statistical diagnostics on gold-level DEA results.
-    Performs normality tests, distribution comparisons, and generates
-    summary statistics for each year in the dataset.
-    Args:
-        gold_df: Gold-level DataFrame with DEA results
-        log_results: Whether to log test results to console
-        alpha: Significance level for statistical tests
-    Returns:
-        Tuple containing:
-        - diagnostics_tests: Dictionary with all test results by year
-        - diagnostics_summary: DataFrame with descriptive statistics
-    """
-    if gold_df is None:
-        logger.warning("No gold_df provided to run_diagnostics")
-        return {}
-    gold_df = gold_df[gold_df["is_complete_grouped"] == True]
-    diagnostics_tests = {}
-    diagnostics_summary = []
-    for year in sorted(gold_df['year'].unique()):
-        year_gold_df = gold_df[gold_df['year'] == year]
-        year_tests = {}
-
-        # Statistical tests
-        year_tests["shapiro_scale_eff"] = shapiro_wilk_function(
-            year_gold_df["DEA_scale_efficiency"].to_numpy(),
-            alpha=alpha)
-        year_tests["scale_eff"] = scale_efficiency_function(
-            year_gold_df["DEA_scale_efficiency"].to_numpy(),
-            alpha=alpha)
-        year_tests["returns_to_scale"] = {
-            "crs_vs_vrs": kolmogorov_smirnov_function(
-                year_gold_df["DEA_crs_input"].to_numpy(),
-                year_gold_df["DEA_vrs_input"].to_numpy(),
-                alpha=alpha),
-            "irs_vs_drs": kolmogorov_smirnov_function(
-                year_gold_df["DEA_irs_input"].to_numpy(),
-                year_gold_df["DEA_drs_input"].to_numpy(),
-                alpha=alpha),
-        }
-        diagnostics_tests[year] = year_tests
-
-        # Append descriptive + correlation
-        desc = year_gold_df.describe().reset_index()
-        desc['year'] = year 
-        diagnostics_summary.append(desc)
-        corr = year_gold_df.corr(numeric_only=True).reset_index()
-        corr['year'] = year
-        diagnostics_summary.append(corr)
-        if log:
-            log_test_results(f"Year {year}", year_tests)
-    diagnostics_summary_df = pd.concat(diagnostics_summary, ignore_index=True)
-
-    # Save outputs
-    paths = load_configs()
-    bucket_name = setup_gcp_bd()
-    local_path = Path(paths["paths"]["gold"])
-    layer = paths["layers"]["gold"]
-    local_path.mkdir(parents=True,
-                     exist_ok=True)
-
-    # Statistical tests → JSON
-    save_data(diagnostics_tests,
-              "diagnostics_tests",
-              directory=local_path,
-              file_format="json")
-    save_data_to_gcs(diagnostics_tests,
-                     "diagnostics_tests",
-                     bucket_name,
-                     layer=layer,
-                     file_format="json")
-    # Describe + correlation → Parquet
-    save_data(diagnostics_summary_df,
-              "diagnostics_summary",
-              directory=local_path,
-              file_format="parquet")
-    save_data_to_gcs(diagnostics_summary_df,
-                     "diagnostics_summary",
-                     bucket_name,
-                     layer=layer,
-                     file_format="parquet")
-    return diagnostics_tests, diagnostics_summary_df
 
 # ---------------------------------------------------------------------
 # Logging Utility
@@ -285,3 +200,99 @@ def log_test_results(test_name: str,
         print(f"{prefix}   {results}")
     if indent == 0:
         print("-" * 40)
+
+# ---------------------------------------------------------------------
+# Diagnostics Runner
+# ---------------------------------------------------------------------
+def run_diagnostics(gold_df: pd.DataFrame,
+                    *,
+                    log: bool = True,
+                    alpha: float = 0.05) -> tuple[dict, pd.DataFrame]:
+    """
+    Statistical diagnostics on gold-level DEA results.
+    Performs normality tests, distribution comparisons, and generates
+    summary statistics for each year in the dataset.
+    Args:
+        gold_df: Gold-level DataFrame with DEA results
+        log_results: Whether to log test results to console
+        alpha: Significance level for statistical tests
+    Returns:
+        Tuple containing:
+        - diagnostics_tests: Dictionary with all test results by year
+        - diagnostics_summary: DataFrame with descriptive statistics
+    Raises:
+        Exception: For other unexpected errors
+    """
+    try:
+        if gold_df is None:
+            logger.warning("No gold_df provided to run_diagnostics")
+            return {}
+        gold_df = gold_df[gold_df["is_complete_grouped"] == True]
+        diagnostics_tests = {}
+        diagnostics_summary = []
+        for year in sorted(gold_df['year'].unique()):
+            year_gold_df = gold_df[gold_df['year'] == year]
+            year_tests = {}
+
+            # Statistical tests
+            year_tests["shapiro_scale_eff"] = shapiro_wilk_function(
+                year_gold_df["DEA_scale_efficiency"].to_numpy(),
+                alpha=alpha)
+            year_tests["scale_eff"] = scale_efficiency_function(
+                year_gold_df["DEA_scale_efficiency"].to_numpy(),
+                alpha=alpha)
+            year_tests["returns_to_scale"] = {
+                "crs_vs_vrs": kolmogorov_smirnov_function(
+                    year_gold_df["DEA_crs_input"].to_numpy(),
+                    year_gold_df["DEA_vrs_input"].to_numpy(),
+                    alpha=alpha),
+                "irs_vs_drs": kolmogorov_smirnov_function(
+                    year_gold_df["DEA_irs_input"].to_numpy(),
+                    year_gold_df["DEA_drs_input"].to_numpy(),
+                    alpha=alpha),
+            }
+            diagnostics_tests[year] = year_tests
+
+            # Append descriptive + correlation
+            desc = year_gold_df.describe().reset_index()
+            desc['year'] = year 
+            diagnostics_summary.append(desc)
+            corr = year_gold_df.corr(numeric_only=True).reset_index()
+            corr['year'] = year
+            diagnostics_summary.append(corr)
+            if log:
+                log_test_results(f"Year {year}", year_tests)
+        diagnostics_summary_df = pd.concat(diagnostics_summary, ignore_index=True)
+
+        # Save outputs
+        paths = load_configs()
+        bucket_name = setup_gcp_bd()
+        local_path = Path(paths["paths"]["gold"])
+        layer = paths["layers"]["gold"]
+        local_path.mkdir(parents=True,
+                        exist_ok=True)
+
+        # Statistical tests → JSON
+        save_data(diagnostics_tests,
+                "diagnostics_tests",
+                directory=local_path,
+                file_format="json")
+        save_data_to_gcs(diagnostics_tests,
+                        "diagnostics_tests",
+                        bucket_name,
+                        layer=layer,
+                        file_format="json")
+        # Describe + correlation → Parquet
+        save_data(diagnostics_summary_df,
+                "diagnostics_summary",
+                directory=local_path,
+                file_format="parquet")
+        save_data_to_gcs(diagnostics_summary_df,
+                        "diagnostics_summary",
+                        bucket_name,
+                        layer=layer,
+                        file_format="parquet")
+        return diagnostics_tests, diagnostics_summary_df
+    except Exception as e:
+        logger.error(f"Error diagnosing data: {e}")
+        raise

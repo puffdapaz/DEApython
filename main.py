@@ -10,8 +10,9 @@ def main():
     1. Process data at bronze ingestion, silver processing and gold DEA modeling
     2. Run statistical diagnostics, additional metrics
     3. Save results locally and to GCP in Medallion architecture
+    4. Load final results to Neon DataWarehouse
     """
-    print(".:.Starting DEApython pipeline.:.")
+    print(".:. Starting DEApython pipeline .:.")
     try:
         # Step 1: Bronze Ingestion
         print("Ingesting data...")

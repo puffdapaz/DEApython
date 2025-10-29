@@ -93,17 +93,20 @@ def run_bronze_query(queries: Dict[str, str]) -> Dict[str, pd.DataFrame]:
     Raises:
         Exception: For other unexpected errors.
     """
-    dataframes = {}
-    for name, query in queries.items():
-        try:
-            df = bd.read_sql(query,
-                             billing_project_id=os.getenv("billing_project_id"))
-            dataframes[name] = df
-        except Exception as e:
-            logger.error(f"Error running query {name}: {e}")
-            dataframes[name] = None
-    return dataframes
-
+    try:
+        dataframes = {}
+        for name, query in queries.items():
+            try:
+                df = bd.read_sql(query,
+                                billing_project_id=os.getenv("billing_project_id"))
+                dataframes[name] = df
+            except Exception as e:
+                logger.error(f"Error running query {name}: {e}")
+                dataframes[name] = None
+        return dataframes
+    except Exception as e:
+        logger.error(f"Unexpected error running queries: {e}")
+        raise
 # ---------------------------------------------------------------------
 # Validation & Saving
 # --------------------------------------------------------------------

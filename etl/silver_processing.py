@@ -89,7 +89,7 @@ def run_silver_query(query: str) -> pd.DataFrame:
                          billing_project_id=os.getenv("billing_project_id"))
         return df
     except Exception as e:
-        logger.error(f"Error running silver query: {e}")
+        logger.error(f"Error running query: {e}")
         raise
 
 # ---------------------------------------------------------------------
@@ -105,12 +105,16 @@ def add_completeness_flags(silver_df: pd.DataFrame,
     Returns:
         pd.DataFrame: Silver DataFrame with 'is_complete_grouped' flag.
     """
-    silver_df = silver_df.copy()
-    tmp_flag = silver_df[value_columns].notnull().all(axis=1)
-    silver_df['is_complete_grouped'] = (silver_df.assign(_tmp=tmp_flag)
-                                                 .groupby('city_id')['_tmp']
-                                                 .transform(lambda x: x.all()))
-    return silver_df
+    try:
+        silver_df = silver_df.copy()
+        tmp_flag = silver_df[value_columns].notnull().all(axis=1)
+        silver_df['is_complete_grouped'] = (silver_df.assign(_tmp=tmp_flag)
+                                                    .groupby('city_id')['_tmp']
+                                                    .transform(lambda x: x.all()))
+        return silver_df
+    except Exception as e:
+        logger.error(f"Error categorizing data: {e}")
+        raise
 
 # ---------------------------------------------------------------------
 # Validation & Saving
@@ -126,7 +130,7 @@ def validate_silver(silver_df: pd.DataFrame) -> None:
     if not validate_data(silver_df,
                          schema=silver_schema,
                          name="Silver"):
-            raise ValueError("Silver data validation failed")       
+            raise ValueError("silver data validation failed")       
 
 def save_silver(silver_df: pd.DataFrame,
                 paths: dict,

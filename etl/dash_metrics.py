@@ -21,6 +21,8 @@ def eff_rank(df: pd.DataFrame) -> pd.DataFrame:
         gold_df: Gold DataFrame with DEA results
     Returns:
         DataFrame with ranking columns added
+    Raises:
+        Exception: For other unexpected errors.
     """
     try:
         df = df.copy()
@@ -38,7 +40,7 @@ def eff_rank(df: pd.DataFrame) -> pd.DataFrame:
               .cumcount() + 1) # 1-based rank
         return df
     except Exception as e:
-        logger.error(f"Error in eff_rank: {e}")
+        logger.error(f"Error in data ranking: {e}")
         raise
 
 def yoy_variance(df: pd.DataFrame) -> pd.DataFrame:
@@ -48,6 +50,8 @@ def yoy_variance(df: pd.DataFrame) -> pd.DataFrame:
         gold_df: Gold DataFrame with DEA results
     Returns:
         DataFrame with variance columns added
+    Raises:
+        Exception: For other unexpected errors.
     """
     try:
         df = df.copy()
@@ -55,7 +59,7 @@ def yoy_variance(df: pd.DataFrame) -> pd.DataFrame:
         df["pct_var_scale"] = df.groupby("city_id")["DEA_scale_efficiency"].pct_change()
         return df
     except Exception as e:
-        logger.error(f"Error in yoy_variance: {e}")
+        logger.error(f"Error in variance calculation: {e}")
         raise
 
 def efficiency_category(df: pd.DataFrame) -> pd.DataFrame:
@@ -65,6 +69,8 @@ def efficiency_category(df: pd.DataFrame) -> pd.DataFrame:
         gold_df: Gold DataFrame with DEA results
     Returns:
         DataFrame with efficiency bin columns added
+    Raises:
+        Exception: For other unexpected errors.
     """
     try:
         df = df.copy()
@@ -86,7 +92,7 @@ def efficiency_category(df: pd.DataFrame) -> pd.DataFrame:
                                       include_lowest=True)
         return df
     except Exception as e:
-        logger.error(f"Error in efficiency_category: {e}")
+        logger.error(f"Error in efficiency categorization: {e}")
         raise
 
 def median_deltas(df: pd.DataFrame) -> pd.DataFrame:
@@ -96,6 +102,8 @@ def median_deltas(df: pd.DataFrame) -> pd.DataFrame:
         gold_df: Gold DataFrame with DEA results
     Returns:
         DataFrame with deviation columns added
+    Raises:
+        Exception: For other unexpected errors.
     """
     try:
         df = df.copy()
@@ -103,7 +111,7 @@ def median_deltas(df: pd.DataFrame) -> pd.DataFrame:
         df["delta_scale_median"] = df["DEA_scale_efficiency"] - df.groupby("year")["DEA_scale_efficiency"].transform("median")
         return df
     except Exception as e:
-        logger.error(f"Error in median_deltas: {e}")
+        logger.error(f"Error in median calculation: {e}")
         raise
 
 def state_benchmarks(df: pd.DataFrame,
@@ -114,6 +122,8 @@ def state_benchmarks(df: pd.DataFrame,
         gold_df: Gold DataFrame with DEA results
     Returns:
         DataFrame with regional benchmark columns added
+    Raises:
+        Exception: For other unexpected errors.
     """
     try:
         df = df.copy()
@@ -131,7 +141,7 @@ def state_benchmarks(df: pd.DataFrame,
                                      how="left")
         return df
     except Exception as e:
-        logger.error(f"Error in regional_benchmarks: {e}")
+        logger.error(f"Error in benchmark calculation: {e}")
         raise
 
 def peer_groups(df: pd.DataFrame) -> pd.DataFrame:
@@ -141,6 +151,8 @@ def peer_groups(df: pd.DataFrame) -> pd.DataFrame:
         gold_df: Gold DataFrame with municipality data
     Returns:
         DataFrame with peer group assignments
+    Raises:
+        Exception: For other unexpected errors.
     """
     try:
         df = df.copy()
@@ -148,7 +160,7 @@ def peer_groups(df: pd.DataFrame) -> pd.DataFrame:
             df["peer_group"] = pd.qcut(df["population"], 4, labels=["Small", "Medium", "Large", "Mega"])
         return df
     except Exception as e:
-        logger.error(f"Error in peer_groups: {e}")
+        logger.error(f"Error in groups calculation: {e}")
         raise
 
 # ---------------------------------------------------------------------
@@ -162,6 +174,8 @@ def analytical_features(df: pd.DataFrame,
         gold_df: Gold DataFrame with DEA results
     Returns:
         Enhanced DataFrame with all analytical features
+    Raises:
+        Exception: For other unexpected errors.
     """
     print("Calculating metrics...")
     try:
