@@ -1,9 +1,9 @@
 """
-Benchmarking and analytical features for DEA results.
-This module creates derived features for comparative analysis.
+Benchmarking and analytical feature engineering for DEA results.
+Used to enrich the Gold layer dataset with comparative, temporal, and categorical indicators.
 """
-import pandas as pd
 import logging
+import pandas as pd
 
 # ---------------------------------------------------------------------
 # Config Loading
@@ -18,9 +18,9 @@ def eff_rank(df: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate yearly rankings based on VRS Input and Scale Efficiency.
     Args:
-        gold_df: Gold DataFrame with DEA results
+        df: Gold DataFrame with DEA results
     Returns:
-        DataFrame with ranking columns added
+        pd.DataFrame: Input DataFrame with 'rank_vrs' column representing yearly rankings (descending efficiency order).
     Raises:
         Exception: For other unexpected errors.
     """
@@ -47,7 +47,7 @@ def yoy_variance(df: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate variance between 2017 and 2019 for key metrics.
     Args:
-        gold_df: Gold DataFrame with DEA results
+        df: Gold DataFrame with DEA results
     Returns:
         DataFrame with variance columns added
     Raises:
@@ -66,7 +66,7 @@ def efficiency_category(df: pd.DataFrame) -> pd.DataFrame:
     """
     Categorize municipalities into efficiency bins.
     Args:
-        gold_df: Gold DataFrame with DEA results
+        df: Gold DataFrame with DEA results
     Returns:
         DataFrame with efficiency bin columns added
     Raises:
@@ -99,7 +99,7 @@ def median_deltas(df: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate deviations from national median for key metrics.
     Args:
-        gold_df: Gold DataFrame with DEA results
+        df: Gold DataFrame with DEA results
     Returns:
         DataFrame with deviation columns added
     Raises:
@@ -119,7 +119,7 @@ def state_benchmarks(df: pd.DataFrame,
     """
     Calculate state-level benchmarks and comparisons.
     Args:
-        gold_df: Gold DataFrame with DEA results
+        df: Gold DataFrame with DEA results
     Returns:
         DataFrame with regional benchmark columns added
     Raises:
@@ -129,13 +129,13 @@ def state_benchmarks(df: pd.DataFrame,
         df = df.copy()
         if "state" in gold_df.columns:
             state_avg = (gold_df.groupby(["year",
-                                          "state"])
-                               [["DEA_vrs_input",
-                                 "DEA_scale_efficiency"]]
-                                .mean()
-                                .reset_index()
-                                .rename(columns={"DEA_vrs_input": "state_avg_vrs",
-                                                 "DEA_scale_efficiency": "state_avg_scale"}))
+                                     "state"])
+                            [["DEA_vrs_input",
+                                "DEA_scale_efficiency"]]
+                            .mean()
+                            .reset_index()
+                            .rename(columns={"DEA_vrs_input": "state_avg_vrs",
+                                                "DEA_scale_efficiency": "state_avg_scale"}))
             df = df.merge(state_avg, on=["year",
                                          "state"],
                                      how="left")
@@ -144,36 +144,16 @@ def state_benchmarks(df: pd.DataFrame,
         logger.error(f"Error in benchmark calculation: {e}")
         raise
 
-def peer_groups(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Create peer groups based on municipality characteristics.
-    Args:
-        gold_df: Gold DataFrame with municipality data
-    Returns:
-        DataFrame with peer group assignments
-    Raises:
-        Exception: For other unexpected errors.
-    """
-    try:
-        df = df.copy()
-        if "population" in df.columns:
-            df["peer_group"] = pd.qcut(df["population"], 4, labels=["Small", "Medium", "Large", "Mega"])
-        return df
-    except Exception as e:
-        logger.error(f"Error in groups calculation: {e}")
-        raise
-
 # ---------------------------------------------------------------------
 # Main Workflow Function
 # ---------------------------------------------------------------------
-def analytical_features(df: pd.DataFrame,
-                        enriched: pd.DataFrame) -> pd.DataFrame:
+def analytical_features(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Main function to add all analytical features to gold DataFrame.
+    Aggregate all analytical feature functions into a single transformation pipeline.
     Args:
-        gold_df: Gold DataFrame with DEA results
+        df (pd.DataFrame): Gold layer DataFrame containing DEA results.
     Returns:
-        Enhanced DataFrame with all analytical features
+        pd.DataFrame: Enhanced DataFrame with analytical and benchmarking features.
     Raises:
         Exception: For other unexpected errors.
     """
@@ -185,7 +165,6 @@ def analytical_features(df: pd.DataFrame,
         enriched = efficiency_category(enriched)
         enriched = median_deltas(enriched)
         enriched = state_benchmarks(enriched, enriched)
-        enriched = peer_groups(enriched)
         return enriched
     except Exception as e:
         logger.error(f"Error in analytical_features: {e}")

@@ -1,6 +1,12 @@
 """
-Data validation module using Pandera.
-Defines schemas for bronze, silver, and gold layers.
+Data validation schemas and utilities using Pandera.
+
+This module defines data quality schemas for different data layers:
+- Bronze: Raw source data schemas
+- Silver: Enriched, joined data schemas  
+- Gold: Final feature schemas for modeling/analysis
+
+Also provides validation functions to enforce data quality standards.
 """
 import pandas as pd
 import pandera as pa
@@ -14,7 +20,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------
 # Shared constants
 # ---------------------------------------------------------------------
-VALID_YEARS = [2017, 2019]
+VALID_YEARS: list[int] = [2017, 2019]
 
 # ---------------------------------------------------------------------
 # Bronze layer schemas (raw data)
@@ -131,8 +137,7 @@ gold_schema = DataFrameSchema({
     "delta_vrs_median": Column(float, nullable=True, checks=Check.between(-1, 1)),
     "delta_scale_median": Column(float, nullable=True, checks=Check.between(-1, 1)),
     "state_avg_vrs": Column(float, nullable=True, checks=Check.between(0, 1)),
-    "state_avg_scale": Column(float, nullable=True, checks=Check.between(0, 1)),
-    "peer_group": Column(str, nullable=True, checks=Check.isin(["Small", "Medium", "Large", "Mega"]))
+    "state_avg_scale": Column(float, nullable=True, checks=Check.between(0, 1))
 })
 
 # ---------------------------------------------------------------------
@@ -145,15 +150,15 @@ def validate_data(data: pd.DataFrame | dict[str, pd.DataFrame],
     """
     Validate input data against defined Pandera schemas.
     Args:
-        data: Either a single DataFrame or a dictionary of DataFrames.
-        schema_map: Mapping of dataset names to schemas (for dict validation).
-        schema: Schema to use if validating a single DataFrame.
-        name: Dataset name (used for logging).
+        data: Either a single DataFrame or a dict of named DataFrames.
+    schema_map: Mapping of dataset names to schemas (used if `data` is a dict).
+    schema: Schema for single DataFrame validation.
+    name: Dataset name used for logging messages.
     Returns:
         bool: True if all validations pass, False otherwise.
     Raises:
-        ValueError: If schema is missing when validating a single DataFrame.
-        TypeError: If data type is not supported.
+        ValueError: If schema is missing for single DataFrame validation.
+        TypeError: If `data` is neither DataFrame nor dict.
     """
     if isinstance(data,
                   dict):

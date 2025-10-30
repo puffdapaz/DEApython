@@ -1,15 +1,16 @@
 """
 Gold Layer Data Modeling Workflow
-This module handles and saves DEA modeling and data diagnostics
-to both local storage and Google Cloud Storage.
+Handles DEA modeling, validation, and diagnostics.
+This layer transforms curated Silver data into analytical Gold outputs
+for business intelligence consumption and visualization.
 """
 import os
-import yaml
 import logging
-import pandas as pd
-import numpy as np
 from pathlib import Path
 from typing import Optional, Tuple, Dict, List
+import yaml
+import pandas as pd
+import numpy as np
 from dotenv import load_dotenv
 from dealib import RTS, Orientation, dea
 from .dash_metrics import analytical_features
@@ -152,7 +153,7 @@ def derived_metrics(subset: pd.DataFrame,
     """
     Add derived DEA metrics and scale efficiency to the dataset.
     Args:
-        subset dataframe: Input DataFrame.
+        subset (pd.DataFrame): Input DataFrame.
         dea_results (Dict[str, np.ndarray]): Dictionary of efficiency scores.
     Returns:
         dataframe: DataFrame with added DEA_* columns.
@@ -234,11 +235,13 @@ def run_gold_model(df_full: pd.DataFrame) -> List[pd.DataFrame]:
 # ---------------------------------------------------------------------
 # Validation, Diagnostics & Saving
 # ---------------------------------------------------------------------
-def validate_gold(gold_df: pd.DataFrame) -> None:
+def validate_gold(gold_df: pd.DataFrame) -> bool:
     """
     Validate gold layer DataFrame against predefined schema.
     Args:
         dataframe dataFrame: DataFrame keyed by dataset name.
+    Returns:
+        bool: True if validation passes, False otherwise.
     Raises:
         ValueError: If validation fails for any DataFrame.
     """
@@ -290,7 +293,7 @@ def save_gold(gold_df: pd.DataFrame,
                               layer=layer)
         logger.info(f"Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
     except Exception as e:
-                logger.error(f"Error saving {layer}: {e}")
+        logger.error(f"Error saving {layer}: {e}")
 
 # ---------------------------------------------------------------------
 # Main Workflow Function
@@ -309,7 +312,7 @@ def model_gold_data() -> Optional[pd.DataFrame]:
 
         df_full = load_gold_data()
         gold_df = run_gold_model(df_full)
-        gold_df = analytical_features(gold_df, df_full)
+        gold_df = analytical_features(gold_df)
 
         validate_gold(gold_df)
         run_diagnostics(gold_df)
@@ -321,7 +324,7 @@ def model_gold_data() -> Optional[pd.DataFrame]:
         return gold_df
     except Exception as e:
             logger.error(f"Modeling failed: {e}")
-            return None
+            raise
 
 if __name__ == "__main__":
     gold_df = model_gold_data()

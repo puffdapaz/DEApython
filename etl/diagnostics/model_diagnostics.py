@@ -1,6 +1,11 @@
 """
-Statistical tests, descriptive analysis, and diagnostic
-reporting for Data Envelopment Analysis (DEA) results and education metrics.
+Statistical analysis and diagnostics for Data Envelopment Analysis (DEA) results.
+
+This module provides:
+- Descriptive statistics and correlation analysis
+- Statistical tests for normality and distribution comparisons  
+- Diagnostic reporting for DEA efficiency scores
+- Results persistence to local and cloud storage
 """
 import os
 import logging
@@ -62,7 +67,7 @@ def analyze_data(df: pd.DataFrame,
     in the dataset and prints formatted results.
     Args:
         df: DataFrame to analyze
-        dataset_name: Name of the dataset for reporting
+        name: Name of the dataset for reporting
     Raises:
         Exception: For other unexpected errors
     """
@@ -82,8 +87,8 @@ def analyze_data(df: pd.DataFrame,
 # ---------------------------------------------------------------------
 # Statistical Tests
 # ---------------------------------------------------------------------
-def shapiro_wilk_function(efficiency_scores: np.ndarray,
-                          alpha: float = 0.05) -> Dict[str, Any]:
+def shapiro_wilk_test(efficiency_scores: np.ndarray,
+                      alpha: float = 0.05) -> Dict[str, Any]:
     """
     Perform Shapiro-Wilk test for normality on efficiency scores.
     Args:
@@ -115,9 +120,9 @@ def shapiro_wilk_function(efficiency_scores: np.ndarray,
         logger.error(f"Shapiro-Wilk test failed: {e}")
         return {"error": str(e)}
 
-def kolmogorov_smirnov_function(sample1: np.ndarray,
-                                sample2: np.ndarray,
-                                alpha: float = 0.05) -> Dict[str, Any]:
+def kolmogorov_smirnov_test(sample1: np.ndarray,
+                            sample2: np.ndarray,
+                            alpha: float = 0.05) -> Dict[str, Any]:
     """
     Perform two-sample Kolmogorov-Smirnov test for distribution comparison.
     Args:
@@ -125,7 +130,13 @@ def kolmogorov_smirnov_function(sample1: np.ndarray,
         sample2: Second sample array  
         alpha: Significance level for hypothesis test
     Returns:
-        Dict containing test results with interpretation
+        Dict containing test results with keys:
+        - test: Test name
+        - statistic: Test statistic
+        - p_value: P-value
+        - alpha: Significance level used
+        - reject_null: Boolean indicating if null hypothesis is rejected
+        - interpretation: Human-readable interpretation of results
     Raises:
         Exception: For other unexpected errors 
     """
@@ -144,15 +155,22 @@ def kolmogorov_smirnov_function(sample1: np.ndarray,
         logger.error(f"KS test failed: {e}")
         return {"error": str(e)}
 
-def scale_efficiency_function(scale_efficiencies: np.ndarray,
-                              alpha: float = 0.05) -> Dict[str, Any]:
+def scale_efficiency_test(scale_efficiencies: np.ndarray,
+                          alpha: float = 0.05) -> Dict[str, Any]:
     """
     Perform one-sample t-test to check if scale efficiency mean equals 1.
     Args:
         scale_efficiencies: Array of scale efficiency scores
         alpha: Significance level for hypothesis test
     Returns:
-        Dict containing test results with mean efficiency
+        Dict containing test results with keys:
+        - test: Test name
+        - statistic: Test statistic
+        - p_value: P-value
+        - alpha: Significance level used
+        - reject_null: Boolean indicating if null hypothesis is rejected
+        - mean_scale_efficiency: Mean of scale efficiencies
+        - interpretation: Human-readable interpretation of results
     Raises:
         Exception: For other unexpected errors
     """
@@ -176,17 +194,19 @@ def scale_efficiency_function(scale_efficiencies: np.ndarray,
 # Logging Utility
 # ---------------------------------------------------------------------
 def log_test_results(test_name: str,
-                     results,
-                     indent: int = 0):
+                     results: dict[str, Any] | Any,
+                     indent: int = 0) -> None:
     """
     Recursively format and log statistical test results in a readable tree structure.
     Args:
         test_name: Name of the test or result section
         results: Dictionary containing test results (can be nested)
-        indent_level: Current indentation level for formatting.
+        indent: Current indentation level for formatting.
+    Returns:
+        Formatted string representation of results.
     """
     prefix = " " * indent
-    print(f"{prefix}📊 {test_name} Results")
+    print(f"{prefix} {test_name} Results")
     if isinstance(results, dict):
         for k, v in results.items():
             if isinstance(v, dict):
@@ -217,9 +237,9 @@ def run_diagnostics(gold_df: pd.DataFrame,
         log_results: Whether to log test results to console
         alpha: Significance level for statistical tests
     Returns:
-        Tuple containing:
-        - diagnostics_tests: Dictionary with all test results by year
-        - diagnostics_summary: DataFrame with descriptive statistics
+    tuple[dict[str, dict[str, Any]], pd.DataFrame]:
+        diagnostics_tests: Nested dictionary of statistical results by year.
+        diagnostics_summary: Combined DataFrame of descriptive and correlation statistics.
     Raises:
         Exception: For other unexpected errors
     """
@@ -235,18 +255,18 @@ def run_diagnostics(gold_df: pd.DataFrame,
             year_tests = {}
 
             # Statistical tests
-            year_tests["shapiro_scale_eff"] = shapiro_wilk_function(
+            year_tests["shapiro_scale_eff"] = shapiro_wilk_test(
                 year_gold_df["DEA_scale_efficiency"].to_numpy(),
                 alpha=alpha)
-            year_tests["scale_eff"] = scale_efficiency_function(
+            year_tests["scale_eff"] = scale_efficiency_test(
                 year_gold_df["DEA_scale_efficiency"].to_numpy(),
                 alpha=alpha)
             year_tests["returns_to_scale"] = {
-                "crs_vs_vrs": kolmogorov_smirnov_function(
+                "crs_vs_vrs": kolmogorov_smirnov_test(
                     year_gold_df["DEA_crs_input"].to_numpy(),
                     year_gold_df["DEA_vrs_input"].to_numpy(),
                     alpha=alpha),
-                "irs_vs_drs": kolmogorov_smirnov_function(
+                "irs_vs_drs": kolmogorov_smirnov_test(
                     year_gold_df["DEA_irs_input"].to_numpy(),
                     year_gold_df["DEA_drs_input"].to_numpy(),
                     alpha=alpha),
@@ -270,28 +290,28 @@ def run_diagnostics(gold_df: pd.DataFrame,
         local_path = Path(paths["paths"]["gold"])
         layer = paths["layers"]["gold"]
         local_path.mkdir(parents=True,
-                        exist_ok=True)
+                         exist_ok=True)
 
         # Statistical tests → JSON
         save_data(diagnostics_tests,
-                "diagnostics_tests",
-                directory=local_path,
-                file_format="json")
+                  "diagnostics_tests",
+                  directory=local_path,
+                  file_format="json")
         save_data_to_gcs(diagnostics_tests,
-                        "diagnostics_tests",
-                        bucket_name,
-                        layer=layer,
-                        file_format="json")
+                         "diagnostics_tests",
+                         bucket_name,
+                         layer=layer,
+                         file_format="json")
         # Describe + correlation → Parquet
         save_data(diagnostics_summary_df,
-                "diagnostics_summary",
-                directory=local_path,
-                file_format="parquet")
+                  "diagnostics_summary",
+                  directory=local_path,
+                  file_format="parquet")
         save_data_to_gcs(diagnostics_summary_df,
-                        "diagnostics_summary",
-                        bucket_name,
-                        layer=layer,
-                        file_format="parquet")
+                         "diagnostics_summary",
+                         bucket_name,
+                         layer=layer,
+                         file_format="parquet")
         return diagnostics_tests, diagnostics_summary_df
     except Exception as e:
         logger.error(f"Error diagnosing data: {e}")

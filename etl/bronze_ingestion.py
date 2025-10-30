@@ -22,13 +22,13 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------
 # Config Loading
 # ---------------------------------------------------------------------
-def load_configs(config_path: str = "configs/path.yml") -> dict:
+def load_configs(config_path: str = "configs/path.yml") -> Dict[str, str]:
     """
     Load YAML configuration for paths and layers.
     Args:
         config_path: Path to the YAML configuration file
     Returns:
-        Dict containing configuration parameters
+        Dictionary containing configuration parameters
     Raises:
         Exception: For other unexpected errors
     """
@@ -110,11 +110,13 @@ def run_bronze_query(queries: Dict[str, str]) -> Dict[str, pd.DataFrame]:
 # ---------------------------------------------------------------------
 # Validation & Saving
 # --------------------------------------------------------------------
-def validate_bronze(dataframes: Dict[str, pd.DataFrame]) -> None:
+def validate_bronze(dataframes: Dict[str, pd.DataFrame]) -> bool:
     """
     Validate bronze layer DataFrames against predefined schemas.
     Args:
         dataframes: Dictionary of DataFrames keyed by dataset name
+    Returns:
+        bool: True if validation passes, False otherwise.
     Raises:
         ValueError: If validation fails for any DataFrame.
     """
@@ -123,14 +125,14 @@ def validate_bronze(dataframes: Dict[str, pd.DataFrame]) -> None:
         raise ValueError("Bronze data validation failed")
 
 def save_bronze(dataframes: Dict[str, pd.DataFrame],
-                paths: dict,
+                paths: Dict,
                 bucket: str) -> None:
     """
     Save DataFrames to local storage and Google Cloud Storage.
     Args:
-        dataframes: Dictionary of DataFrames to save
-        paths: Local directory path for storage
-        bucket: GCS bucket name
+        dataframes (Dict[str, pd.DataFrame]): Mapping of dataset names to DataFrames.
+        paths (Dict): Configuration dictionary containing 'paths' and 'layers' keys.
+        bucket (str): Target Google Cloud Storage bucket name.
     Raises:
         Exception: For other unexpected errors.
     """
@@ -151,7 +153,8 @@ def save_bronze(dataframes: Dict[str, pd.DataFrame],
                                       layer=layer)
                 logger.info(f"Data saved at {local_path} and GCP://{bucket}/{layer} successfully")
     except Exception as e:
-                logger.error(f"Error saving {layer}: {e}")
+        logger.error(f"Error saving {layer}: {e}")
+        raise
 
 # ---------------------------------------------------------------------
 # Main Workflow Function
@@ -160,7 +163,7 @@ def ingest_bronze_data() -> Dict[str, pd.DataFrame]:
     """
     Orchestrate bronze layer data ingestion workflow.
     Returns:
-        Dictionary of loaded DataFrames if successful, None otherwise
+        Dict[str, pd.DataFrame]: Loaded DataFrames by query name.
     Raises:
         Exception: If any critical step in the workflow fails
     """
@@ -179,8 +182,8 @@ def ingest_bronze_data() -> Dict[str, pd.DataFrame]:
         print(f"Ingestion completed")
         return dataframes
     except Exception as e:
-            logger.error(f"Ingestion failed: {e}")
-            raise
+        logger.error(f"Ingestion failed: {e}")
+        raise
 
 if __name__ == "__main__":
     ingest_bronze_data()

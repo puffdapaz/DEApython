@@ -1,51 +1,48 @@
 """
-Data saving utilities for local filesystem and Google Cloud Storage.
+Data saving utilities for local filesystem and Google Cloud Storage (GCS).
 
-This module provides standardized methods to persist dataframes
-and dictionaries in multiple formats, both locally and remotely.
+This module provides standardized methods to persist pandas DataFrames
+and Python dictionaries in multiple formats — CSV, Parquet, and JSON —
+both locally and remotely via GCS.
 """
 import os
 import tempfile
 import json
 import numpy as np
 import pandas as pd
-from typing import Any
+from pathlib import Path
+from typing import Any, Literal, Union
 from google.cloud import storage
 from dotenv import load_dotenv
 
 def _convert_keys(obj: Any) -> Any:
     """
-    Recursively convert dictionary keys to str (for JSON serialization).
+    Recursively convert dictionary keys to strings for JSON serialization.
     Args:
-        obj: Any object (dict, list, numpy scalar, or other).
+        obj (Any): Any object (dict, list, NumPy scalar, or other).
     Returns:
-        The object with all dictionary keys converted to str.
+        Any: The object with all dictionary keys converted to strings.
     """
-    if isinstance(obj,
-                  dict):
-        return {str(k): _convert_keys(v) for k,
-                                      v in obj.items()}
-    elif isinstance(obj,
-                    list):
+    if isinstance(obj, dict):
+        return {str(k): _convert_keys(v) for k, v in obj.items()}
+    if isinstance(obj, list):
         return [_convert_keys(i) for i in obj]
-    elif isinstance(obj,
-                    np.generic):
+    if isinstance(obj, np.generic):
         return obj.item()
-    else:
-        return obj
+    return obj
     
-def _save_to_file(obj: pd.DataFrame | dict,
-                  filepath: str,
-                  file_format: str) -> None:
+def _save_to_file(obj: Union[pd.DataFrame, dict],
+                  filepath: str | Path,
+                  file_format: Literal["csv", "parquet", "json"],) -> None:
     """
-    Save a DataFrame or dictionary to a file.
+    Save a DataFrame or dictionary to a local file.
     Args:
-        obj: DataFrame or dictionary to save.
+        obj: The DataFrame or dictionary.
         filepath: Full path including filename and extension.
-        file_format: Format to save in ("csv", "parquet", "json").
+        file_format: Output format ("csv", "parquet", or "json").
     Raises:
-        ValueError: If unsupported format is used.
-        TypeError: If object type is not supported.
+        ValueError: If an unsupported format is specified.
+        TypeError: If the object type is unsupported.
     """
     if isinstance(obj,
                   pd.DataFrame):
@@ -65,7 +62,7 @@ def _save_to_file(obj: pd.DataFrame | dict,
     elif isinstance(obj,
                     dict):
         if file_format != "json":
-            raise ValueError("Dict objects can only be saved as JSON")
+            raise ValueError("dictionary objects can only be saved as JSON")
         clean_obj = _convert_keys(obj)
         with open(filepath,
                   "w",
@@ -77,19 +74,19 @@ def _save_to_file(obj: pd.DataFrame | dict,
     else:
         raise TypeError("Only DataFrame or dict are supported")
 
-def save_data(obj: pd.DataFrame | dict,
+def save_data(obj: Union[pd.DataFrame, dict],
               filename: str,
               directory: str = "data/raw",
-              file_format: str = "parquet") -> str:
+              file_format: Literal["csv", "parquet", "json"] = "parquet",) -> str:
     """
     Save a DataFrame or dictionary to the local filesystem.
     Args:
-        obj: DataFrame or dictionary to save.
-        filename: Name without extension.
-        directory: Target directory for saving.
-        file_format: Format to save in ("csv", "parquet", "json").
+        obj: The DataFrame or dictionary to save.
+        filename: Filename without extension.
+        directory: Target directory for saving (created if missing).
+        file_format: Format to save in ("csv", "parquet", or "json").
     Returns:
-        str: Path of the saved file.
+        str: Full path of the saved file.
     """
     os.makedirs(directory,
                 exist_ok=True)
@@ -100,30 +97,35 @@ def save_data(obj: pd.DataFrame | dict,
                  file_format)
     return path
 
-def save_data_to_gcs(obj: pd.DataFrame | dict,
-                     filename: str, 
-                     bucket_name: str, 
-                     layer: str = "bronze", 
-                     file_format: str = "parquet") -> str:
+def save_data_to_gcs(obj: Union[pd.DataFrame, dict],
+                     filename: str,
+                     bucket_name: str,
+                     layer: str = "bronze",
+                     file_format: Literal["csv", "parquet", "json"] = "parquet",) -> str:
     """
     Save a DataFrame or dictionary to Google Cloud Storage (GCS).
-    Requires GOOGLE_APPLICATION_CREDENTIALS to be set in .env or environment.
+    Requires the environment variable GOOGLE_APPLICATION_CREDENTIALS
+    (optionally defined in a .env file).
     Args:
-        obj: DataFrame or dictionary to save.
-        filename: Name without extension.
-        bucket_name: Target GCS bucket name.
-        layer: Folder layer within the bucket (default "bronze").
-        file_format: Format to save in ("csv", "parquet", "json").
+        obj: The DataFrame or dictionary to upload.
+        filename: Filename without extension.
+        bucket_name: Name of the target GCS bucket.
+        layer: Subfolder within the bucket (default "bronze").
+        file_format: Format to save in ("csv", "parquet", or "json").
     Returns:
-        str: GCS blob path where the file was uploaded.
+        str: Path of the uploaded blob in GCS.
     Raises:
-        RuntimeError: If upload to GCS fails.
+        RuntimeError: If the upload to GCS fails.
     """
     load_dotenv()
     cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    client = storage.Client.from_service_account_json(cred_path) if cred_path else storage.Client()
+    client = (storage.Client.from_service_account_json(cred_path) 
+              if cred_path 
+              else storage.Client())
     bucket = client.bucket(bucket_name)
+
     blob_path = f"{layer}/{filename}.{file_format}"
+
     tmp_file = os.path.join(tempfile.gettempdir(),
                             f"{filename}.{file_format}")
     try:

@@ -1,10 +1,9 @@
 """
-Warehouse Loader
-----------------
+Warehouse Loader for DEApython Analytics Pipeline.
 Uploads Gold layer DEApython outputs to a Neon Postgres database
-for BI visualization (Power BI, Metabase, etc.).
-
-Integration layer between the analytical pipeline and BI tools.
+for BI visualization.
+This module serves as the integration layer between the analytical 
+pipeline and BI tools.
 """
 
 import os
@@ -56,7 +55,7 @@ def create_neon_connection():
     Args:
         cert_path : Path to save the SSL certificate locally
     Returns:
-        sqlalchemy.engine : SQLAlchemy engine object.
+        sqlalchemy.engine.Engine: Active SQLAlchemy engine object.
     Raises:
         Exception: For other unexpected errors
     """
@@ -69,11 +68,12 @@ def create_neon_connection():
 def load_to_neon(df: pd.DataFrame = None,
                  table_name: str = "DEA_python") -> bool:
     """
-    Load your DEApython outputs to Neon
+    Load DEApython Gold layer data to a Neon Postgres warehouse.
     Args:
-        cert_path : Path to save the SSL certificate locally
+        df (pd.DataFrame, optional): DataFrame to upload. If None, loads from DATA_PATH.
+        table_name (str): Target table name in the Neon database.
     Returns:
-        sqlalchemy.engine : SQLAlchemy engine object.
+        bool: True if the load succeeded, raises Exception otherwise.
     Raises:
         Exception: For other unexpected errors
     """

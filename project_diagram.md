@@ -10,12 +10,12 @@ flowchart TB
   %% Colorblind-friendly palette with high contrast
   %% ======================
 classDef external fill:#E6F3FF,stroke:#0066CC,stroke-width:3px,color:#000000,font-weight:bold,text-align:center;
-    classDef bronze fill:#FFE8CC,stroke:#E65100,stroke-width:3px,color:#000000,font-weight:bold,text-align:center;
-    classDef silver fill:#D4EDDA,stroke:#155724,stroke-width:3px,color:#000000,font-weight:bold,text-align:center;
-    classDef gold fill:#F3E5F5,stroke:#4A148C,stroke-width:3px,color:#000000,font-weight:bold,text-align:center;
-    classDef validation fill:#E3F2FD,stroke:#0D47A1,stroke-width:3px,color:#000000,font-weight:bold,text-align:center;
-    classDef storage fill:#FFF3CD,stroke:#856404,stroke-width:3px,color:#000000,font-weight:bold,text-align:center;
-    classDef process fill:#F8F9FA,stroke:#495057,stroke-width:2px,color:#000000,font-weight:bold,text-align:center;
+classDef bronze fill:#FFE8CC,stroke:#E65100,stroke-width:3px,color:#000000,font-weight:bold,text-align:center;
+classDef silver fill:#D4EDDA,stroke:#155724,stroke-width:3px,color:#000000,font-weight:bold,text-align:center;
+classDef gold fill:#F3E5F5,stroke:#4A148C,stroke-width:3px,color:#000000,font-weight:bold,text-align:center;
+classDef validation fill:#E3F2FD,stroke:#0D47A1,stroke-width:3px,color:#000000,font-weight:bold,text-align:center;
+classDef storage fill:#FFF3CD,stroke:#856404,stroke-width:3px,color:#000000,font-weight:bold,text-align:center;
+classDef process fill:#F8F9FA,stroke:#495057,stroke-width:2px,color:#000000,font-weight:bold,text-align:center;
 
 
   %% ======================
@@ -61,6 +61,7 @@ classDef external fill:#E6F3FF,stroke:#0066CC,stroke-width:3px,color:#000000,fon
   %% ======================
   ANALYTICS[Analytical features<br/>📈]
   STORAGE[(Storage<br/>💾)]
+  WAREHOUSE[(Warehouse<br/>🛢️)]
   MAPS[Geographic features<br/>🗺️]
 
   %% ======================
@@ -83,6 +84,7 @@ classDef external fill:#E6F3FF,stroke:#0066CC,stroke-width:3px,color:#000000,fon
   B_SAVE --> STORAGE
   S_SAVE --> STORAGE
   G_SAVE --> STORAGE
+  G_SAVE --> WAREHOUSE
 
   %% ======================
   %% Class assignments
@@ -91,7 +93,7 @@ classDef external fill:#E6F3FF,stroke:#0066CC,stroke-width:3px,color:#000000,fon
   class B_EXTRACT,B_SAVE,S_TRANSFORM,S_FLAGS,G_PREP,G_DEA process;
   class B_VALIDATE,S_VALIDATE,G_VALIDATE validation;
   class B_SAVE,S_SAVE,G_SAVE storage;
-  class STORAGE storage;
+  class STORAGE,WAREHOUSE storage;
   class MAPS silver;
   class ANALYTICS,G_DIAG gold;
   class BRONZE bronze;

@@ -1,7 +1,9 @@
 """
-Geodata extraction and merging utilities.
-This module integrates Brazilian municipality geospatial data
-from the geobr database into the Silver layer dataset.
+Geodata extraction and merging utilities for Brazilian municipality data.
+
+This module integrates Brazilian municipality geospatial data from the 
+geobr database into analytical datasets. Provides functions for fetching
+municipality boundaries and merging them with analytical data.
 """
 
 import logging
@@ -30,12 +32,13 @@ def fetch_geodata(year: int) -> gpd.GeoDataFrame:
     try:
         gdf = geobr.read_municipality(code_muni = "all",
                                       year = year)
+        # Drop redundant or unnecessary columns
         gdf = gpd.GeoDataFrame(gdf).drop(columns = ["name_muni",
                                                     "code_state",
                                                     "abbrev_state"])
         return gdf
     except Exception as e:
-        logging.error(f"Error fetching geobr data: {e}")
+        logger.error(f"Error fetching geobr data: {e}")
         raise
 
 def merge_geodata(data : pd.DataFrame,
@@ -43,7 +46,7 @@ def merge_geodata(data : pd.DataFrame,
     """
     Merge the analytical dataset with municipality geodata.
     Args:
-        data (pd.DataFrame): Silver-layer analytical dataset with 'city_id' column.
+        df (pd.DataFrame): Silver-layer analytical dataset with `city_id` column.
         geodata (gpd.GeoDataFrame): Municipality polygons from geobr.
     Returns:
         gpd.GeoDataFrame: Enriched dataset with geometries.
@@ -68,5 +71,5 @@ def merge_geodata(data : pd.DataFrame,
         print("geobr data merging completed")
         return merged_map
     except Exception as e:
-        logging.error(f"Error merging geobr data: {e}")
+        logger.error(f"Error merging geobr data: {e}")
         raise

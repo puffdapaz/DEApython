@@ -98,15 +98,15 @@ def run_silver_query(query: str) -> pd.DataFrame:
 def add_completeness_flags(silver_df: pd.DataFrame,
                            value_columns: List[str]) -> pd.DataFrame:
     """
-    Add municipality-level completeness flag across years.
     Args:
-        silver_df (pd.DataFrame): Silver layer DataFrame.
-        value_columns (List[str]): Columns to check for completeness.
-    Returns:
-        pd.DataFrame: Silver DataFrame with 'is_complete_grouped' flag.
+    silver_df: Silver layer DataFrame.
+    value_columns: List of column names to check for completeness.
+Returns:
+    pd.DataFrame: DataFrame with an additional 'is_complete_grouped' flag per municipality.
     """
     try:
         silver_df = silver_df.copy()
+        # Flag municipalities that have all non-null values across all value columns and years
         tmp_flag = silver_df[value_columns].notnull().all(axis=1)
         silver_df['is_complete_grouped'] = (silver_df.assign(_tmp=tmp_flag)
                                                     .groupby('city_id')['_tmp']
@@ -119,11 +119,13 @@ def add_completeness_flags(silver_df: pd.DataFrame,
 # ---------------------------------------------------------------------
 # Validation & Saving
 # ---------------------------------------------------------------------
-def validate_silver(silver_df: pd.DataFrame) -> None:
+def validate_silver(silver_df: pd.DataFrame) -> bool:
     """
     Validate silver layer DataFrame against predefined schema.
     Args:
-        dataframe: DataFrame keyed by dataset name.
+        silver_df: Silver layer DataFrame to validate.
+    Returns:
+        bool: True if validation passes, False otherwise.
     Raises:
         ValueError: If validation fails for any DataFrame.
     """
@@ -138,7 +140,7 @@ def save_silver(silver_df: pd.DataFrame,
     """
     Save DataFrames to local storage and Google Cloud Storage.
     Args:
-        dataframes: Dictionary of DataFrames to save
+        silver_df: Silver layer DataFrame.
         paths: Local directory path for storage
         bucket: GCS bucket name
     Raises:
@@ -158,7 +160,8 @@ def save_silver(silver_df: pd.DataFrame,
                               layer=layer)
         logger.info(f"Data saved at {local_path} and GCP://{bucket}/{layer} successfully")
     except Exception as e:
-                logger.error(f"Error saving {layer}: {e}")
+        logger.error(f"Error saving {layer}: {e}")
+        raise
 
 # ---------------------------------------------------------------------
 # Main Workflow Function
@@ -167,7 +170,7 @@ def process_silver_data() -> Optional[bd.Table]:
     """
     Orchestrate silver layer data processing workflow.
     Returns:      
-        dataFrame: Resulting DataFrame, None otherwise
+        pd.DataFrame | None: The processed Silver dataset, or None if the pipeline fails.
     Raises:
         Exception: If any critical step in the workflow fails
     """
@@ -205,7 +208,7 @@ def process_silver_data() -> Optional[bd.Table]:
         return silver_df
     except Exception as e:
         logger.error(f"Processing failed: {e}")
-        silver_df = None
+        raise
 
 if __name__ == "__main__":
     silver_df = process_silver_data()
