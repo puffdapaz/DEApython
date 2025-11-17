@@ -130,6 +130,7 @@ gold_schema = DataFrameSchema({
     "DEA_scale_efficiency": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_returns_nature": Column(str, nullable=True, checks=Check.isin(["Constant", "Increasing", "Decreasing"])),
     "rank_vrs": Column(int, nullable=True, checks=Check.between(1, 5570)),
+    "state_rank_vrs": Column(int, nullable=True, checks=Check.between(1, 860)),
     "pct_var_vrs": Column(float, nullable=True, checks=Check.between(-50, 200)),
     "pct_var_scale": Column(float, nullable=True, checks=Check.between(-50, 200)),
     "category_vrs": Column(str, nullable=True, checks=Check.isin(["Inefficient", "Moderate", "Efficient"])),

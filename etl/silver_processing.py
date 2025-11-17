@@ -12,7 +12,7 @@ from typing import List, Optional
 from pathlib import Path
 from dotenv import load_dotenv
 from .save_utils import save as save
-from .geodata import fetch_geodata, merge_geodata
+from .geodata import fetch_geodata, convert_to_topojson, save_json
 from .diagnostics.data_validation import silver_schema, validate_data
 from .diagnostics.model_diagnostics import analyze_data
 
@@ -195,7 +195,10 @@ def process_silver_data() -> Optional[bd.Table]:
                                            value_columns)
 
         geo_df = fetch_geodata(year=2017)
-        silver_df = merge_geodata(silver_df, geo_df)
+        geo_json = geo_df.copy()
+        topo_json = convert_to_topojson(geo_json)
+        save_json(topo_json)
+        # silver_df = merge_geodata(silver_df, geo_df)
 
         validate_silver(silver_df)
         analyze_data(silver_df,

@@ -31,7 +31,7 @@ def _convert_keys(obj: Any) -> Any:
         return obj.item()
     return obj
     
-def _save_to_file(obj: Union[pd.DataFrame, dict],
+def _save_to_file(obj: Union[pd.DataFrame, dict, str],
                   filepath: str | Path,
                   file_format: Literal["csv", "parquet", "json"],) -> None:
     """
@@ -71,10 +71,15 @@ def _save_to_file(obj: Union[pd.DataFrame, dict],
                       f,
                       indent=2,
                       ensure_ascii=False)
+    elif isinstance(obj, str):
+        if file_format != "json":
+            raise ValueError("string objects can only be saved as JSON")
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(obj)
     else:
         raise TypeError("Only DataFrame or dict are supported")
 
-def save_data(obj: Union[pd.DataFrame, dict],
+def save_data(obj: Union[pd.DataFrame, dict, str],
               filename: str,
               directory: str = "data/raw",
               file_format: Literal["csv", "parquet", "json"] = "parquet",) -> str:
@@ -97,7 +102,7 @@ def save_data(obj: Union[pd.DataFrame, dict],
                  file_format)
     return path
 
-def save_data_to_gcs(obj: Union[pd.DataFrame, dict],
+def save_data_to_gcs(obj: Union[pd.DataFrame, dict, str],
                      filename: str,
                      bucket_name: str,
                      layer: str = "bronze",

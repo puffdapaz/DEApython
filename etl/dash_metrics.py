@@ -16,15 +16,16 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------
 def eff_rank(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Calculate yearly rankings based on VRS Input and Scale Efficiency.
+    Calculate yearly national and state rankings based on VRS Input and Scale Efficiency.
     Args:
         df: Gold DataFrame with DEA results
     Returns:
-        pd.DataFrame: Input DataFrame with 'rank_vrs' column representing yearly rankings (descending efficiency order).
+        pd.DataFrame: Input DataFrame with `rank_vrs` and `state_rank_vrs` column representing yearly rankings (descending efficiency order).
     Raises:
         Exception: For other unexpected errors.
     """
     try:
+        # 1-based National ranking
         df = df.copy()
         df = df.sort_values(
             by=["year", 
@@ -34,10 +35,23 @@ def eff_rank(df: pd.DataFrame) -> pd.DataFrame:
                        False, 
                        False],
             ignore_index=True)
-        # Create group-based rank
-        df["rank_vrs"] = (
-            df.groupby("year")
-              .cumcount() + 1) # 1-based rank
+        df["rank_vrs"] = (df.groupby("year")
+                            .cumcount() + 1)
+
+        # 1-based State-level ranking
+        df = df.sort_values(
+            by=["year", 
+                "state", 
+                "DEA_vrs_input", 
+                "DEA_scale_efficiency"],
+            ascending=[True, 
+                       True, 
+                       False, 
+                       False],
+            ignore_index=True)
+        df["state_rank_vrs"] = (df.groupby(["year", "state"])
+                                  .cumcount() + 1)
+
         return df
     except Exception as e:
         logger.error(f"Error in data ranking: {e}")
@@ -129,13 +143,13 @@ def state_benchmarks(df: pd.DataFrame,
         df = df.copy()
         if "state" in gold_df.columns:
             state_avg = (gold_df.groupby(["year",
-                                     "state"])
+                                          "state"])
                             [["DEA_vrs_input",
-                                "DEA_scale_efficiency"]]
+                              "DEA_scale_efficiency"]]
                             .mean()
                             .reset_index()
                             .rename(columns={"DEA_vrs_input": "state_avg_vrs",
-                                                "DEA_scale_efficiency": "state_avg_scale"}))
+                                             "DEA_scale_efficiency": "state_avg_scale"}))
             df = df.merge(state_avg, on=["year",
                                          "state"],
                                      how="left")
