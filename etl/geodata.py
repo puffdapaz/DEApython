@@ -121,18 +121,43 @@ def fetch_geodata(year: int) -> gpd.GeoDataFrame:
 # ---------------------------------------------------------------------
 # Cleaning helpers
 # ---------------------------------------------------------------------
+def clean_strings(df: pd.DataFrame, cols: list):
+    """Remove NaNs and enforce string dtype."""
+    df = df.replace({pd.NA: None, "nan": None, "NaN": None})
+    for col in cols:
+        if col in df.columns:
+            df[col] = (
+                df[col]
+                .astype(str)
+                .str.replace(".0", "", regex=False)
+                .str.strip()
+            )
+    return df
+
+def pad_state_id(df):
+    """Ensure state_id is always 2 digits."""
+    df["state_id"] = df["state_id"].astype(str).str.zfill(2)
+    return df
+
+def simplify_geometries(df, tolerance=0.03):
+    """Simplify geometries to reduce file size."""
+    df["geometry"] = df.geometry.simplify(tolerance)
+    return df
 
 # ---------------------------------------------------------------------
 # Geodata JSON Conversion and Export
 # ---------------------------------------------------------------------
-
 def convert_to_topojson(muni_gdf: gpd.GeoDataFrame,
                         state_gdf: gpd.GeoDataFrame,) -> str:
     """
     Convert GeoDataFrame to TopoJSON for Power BI.
     Args:
-        gdf: GeoDataFrame with state and municipality geometries
-        output_path: Path to save the TopoJSON file
+        muni_gdf: GeoDataFrame with municipality geometries
+        state_gdf: GeoDataFrame with state geometries
+    Returns:
+        topo_json: str: TopoJSON file as string
+    Raises:
+        Exception: If converting geodata fails.
     """
     try:
         muni_gdf = (muni_gdf.to_crs(epsg=4326)
@@ -140,38 +165,41 @@ def convert_to_topojson(muni_gdf: gpd.GeoDataFrame,
         state_gdf = (state_gdf.to_crs(epsg=4326)
                               .copy())
         
-        # --- Clean BEFORE cast to str ---
-        muni_gdf = muni_gdf.replace({pd.NA: None, "nan": None, "NaN": None})
-        state_gdf = state_gdf.replace({pd.NA: None, "nan": None, "NaN": None})
+        # Clean & type normalize
+        muni_gdf = clean_strings(muni_gdf, ["city_id",
+                                            "state_id",
+                                            "city_name", 
+                                            "state_name"])
+        state_gdf = clean_strings(state_gdf, ["state_id", 
+                                              "state_name"])
 
-        # --- Ensure padded state IDs ---
-        muni_gdf["state_id"] = muni_gdf["state_id"].astype(str).str.zfill(2)
-        state_gdf["state_id"] = state_gdf["state_id"].astype(str).str.zfill(2)
+        muni_gdf = pad_state_id(muni_gdf)
+        state_gdf = pad_state_id(state_gdf)
 
-        # --- Convert all string fields safely ---
-        for df in [muni_gdf, state_gdf]:
-            for col in ["city_id", "state_id", "city_name", "state_name"]:
-                if col in df.columns:
-                    df[col] = df[col].astype(str).str.replace(".0", "", regex=False)
-
-        # --- Hierarchy ---
+        # Define hierarchy
         state_gdf["id"] = state_gdf["state_id"]
         muni_gdf["id"] = muni_gdf["city_id"]
 
-        muni_gdf["parent"] = muni_gdf["state_id"]
         state_gdf["parent"] = ""
+        muni_gdf["parent"] = muni_gdf["state_id"]
 
-        # --- Simplify geometry ---
-        muni_gdf["geometry"]  = muni_gdf.geometry.simplify(0.03)
-        state_gdf["geometry"] = state_gdf.geometry.simplify(0.03)
+        # Simplify shapes
+        muni_gdf = simplify_geometries(muni_gdf)
+        state_gdf = simplify_geometries(state_gdf)
 
-        # --- Final combined GDF ---
-        keep = ["id","city_id","state_id","city_name","state_name","parent","geometry"]
-        pbi_gdf = pd.concat([state_gdf, muni_gdf], ignore_index=True)[keep]
-        pbi_gdf = gpd.GeoDataFrame(pbi_gdf, geometry="geometry", crs=4326)
+        # Combine into one unified table
+        keep = ["id", 
+                "city_id", 
+                "state_id", 
+                "city_name", 
+                "state_name", 
+                "parent", 
+                "geometry"]
+        combined = pd.concat([state_gdf, muni_gdf], ignore_index=True)[keep]
+        combined = gpd.GeoDataFrame(combined, geometry="geometry", crs=4326)
 
-        # --- Convert to JSON ---
-        topo = tp.Topology(pbi_gdf, prequantize=False)
+        # Export to TopoJSON
+        topo = tp.Topology(combined, prequantize=False)
         topo_json = topo.to_json().replace("NaN", '""')
         return topo_json
     except Exception as e:
