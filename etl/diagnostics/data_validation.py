@@ -27,7 +27,6 @@ VALID_YEARS: list[int] = [2017, 2019]
 # ---------------------------------------------------------------------
 population_schema = DataFrameSchema({
     "id_municipio": Column(str),
-    "sigla_uf": Column(str, nullable=True),
     "ano": Column(int, checks=Check.isin(VALID_YEARS)),
     "populacao": Column(int, checks=Check.ge(0))
 })
@@ -40,21 +39,18 @@ gdp_schema = DataFrameSchema({
 
 education_spending_schema = DataFrameSchema({
     "id_municipio": Column(str),
-    "sigla_uf": Column(str, nullable=True),
     "ano": Column(int, checks=Check.isin(VALID_YEARS)),
     "valor": Column(float, checks=Check.ge(0))
 })
 
 enrollments_schema = DataFrameSchema({
     "id_municipio": Column(str),
-    "sigla_uf": Column(str, nullable=True),
     "ano": Column(int, checks=Check.isin(VALID_YEARS)),
     "quantidade_matricula": Column(int, checks=Check.ge(0))
 })
 
 ideb_schema = DataFrameSchema({
     "id_municipio": Column(str),
-    "sigla_uf": Column(str, nullable=True),
     "ano": Column(int, checks=Check.isin(VALID_YEARS)),
     "anos_escolares": Column(str, nullable=True, checks=Check.isin(["iniciais (1-5)", "finais (6-9)"])),
     "ideb": Column(float, nullable=True, checks=Check.between(0, 10))
@@ -82,10 +78,11 @@ schemas = {
 # ---------------------------------------------------------------------
 silver_schema = DataFrameSchema({
     "city_id": Column(str, nullable=False),
-    "state": Column(str, nullable=False),
     "year": Column(int, checks=Check.isin(VALID_YEARS)),
     "population": Column(int, nullable=True, checks=Check.ge(0)),
     "city_name": Column(str, nullable=True),
+    "state_id": Column(str, nullable=False),
+    "state_name": Column(str, nullable=False),
     "gdp": Column(int, nullable=True, checks=Check.ge(0)),
     "education_spending": Column(int, nullable=True, checks=Check.ge(0)),
     "enrollments": Column(int, nullable=True, checks=Check.ge(0)),
@@ -105,10 +102,11 @@ silver_schema = DataFrameSchema({
 # ---------------------------------------------------------------------
 gold_schema = DataFrameSchema({
     "city_id": Column(str, nullable=False),
-    "state": Column(str, nullable=False),
     "year": Column(int, checks=Check.isin(VALID_YEARS)),
     "population": Column(int, nullable=True, checks=Check.ge(0)),
     "city_name": Column(str, nullable=True),
+    "state_id": Column(str, nullable=False),
+    "state_name": Column(str, nullable=False),
     "gdp": Column(int, nullable=True, checks=Check.ge(0)),
     "education_spending": Column(int, nullable=True, checks=Check.ge(0)),
     "enrollments": Column(int, nullable=True, checks=Check.ge(0)),

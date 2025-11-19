@@ -1,19 +1,15 @@
 """
-Geodata extraction and merging utilities for Brazilian municipality data.
-
-This module integrates Brazilian municipality geospatial data from the 
-geobr database into analytical datasets. Provides functions for fetching
-municipality boundaries and merging them with analytical data.
+Geodata fetching, cleaning, and exporting Brazilian geospatial data
+as TopoJSON for analytical consumption
 """
 
 import os
-from pathlib import Path
 import logging
+from pathlib import Path
+import pandas as pd
 import geopandas as gpd
 import geobr
-import pandas as pd
 import topojson as tp
-import json
 import yaml
 from dotenv import load_dotenv
 from .save_utils import save_data, save_data_to_gcs
@@ -63,22 +59,29 @@ def setup_gcp_bd() -> str:
 
 def fetch_geodata(year: int) -> gpd.GeoDataFrame:
     """
-    Fetch geodata for Brazilian municipalities from geobr.
+    Fetch geodata for Brazilian states and municipalities from geobr.
     Args:
-        year (int): Reference year for the municipality boundaries (default: 2019).
+        year (int): Reference year for boundaries (default: 2019).
     Returns:
-        gpd.GeoDataFrame: Municipality geodata.
+        muni_gdf: GeoDataFrame (municipalities)
+        state_gdf: GeoDataFrame (states)
     Raises:
         Exception: If fetching geodata fails.
     """
     try:
-        gdf = geobr.read_municipality(code_muni = "all",
-                                      year = year)
-        gdf = gpd.GeoDataFrame(gdf).rename(columns={"code_muni": "city_id",
-                                                    "code_state": "state_id",
-                                                    "abbrev_state": "state_abbr"
-})
-        return gdf
+        muni_gdf = geobr.read_municipality(code_muni = "all",
+                                           year = year)
+        muni_gdf = gpd.GeoDataFrame(muni_gdf).rename(columns={"code_muni": "city_id",
+                                                              "name_muni": "city_name",
+                                                              "code_state": "state_id",
+                                                              "name_state": "state_name"
+                                                             })
+        state_gdf = geobr.read_state(year=year)
+        state_gdf = gpd.GeoDataFrame(state_gdf).rename(columns={"code_state": "state_id",
+                                                                "name_state": "state_name"                                                                
+                                                               })
+
+        return muni_gdf, state_gdf
     except Exception as e:
         logger.error(f"Error fetching geobr data: {e}")
         raise
@@ -116,29 +119,60 @@ def fetch_geodata(year: int) -> gpd.GeoDataFrame:
 #         raise
 
 # ---------------------------------------------------------------------
+# Cleaning helpers
+# ---------------------------------------------------------------------
+
+# ---------------------------------------------------------------------
 # Geodata JSON Conversion and Export
 # ---------------------------------------------------------------------
 
-def convert_to_topojson(gdf: gpd.GeoDataFrame) -> str:
+def convert_to_topojson(muni_gdf: gpd.GeoDataFrame,
+                        state_gdf: gpd.GeoDataFrame,) -> str:
     """
     Convert GeoDataFrame to TopoJSON for Power BI.
     Args:
-        gdf: GeoDataFrame with municipality geometries
+        gdf: GeoDataFrame with state and municipality geometries
         output_path: Path to save the TopoJSON file
     """
     try:
-        # Simplify geometries for web display
-        gdf_simplified = (gdf.to_crs(epsg=4326)
-                             .copy())
-        gdf_simplified["geometry"] = gdf_simplified.geometry.simplify(tolerance=0.02)
+        muni_gdf = (muni_gdf.to_crs(epsg=4326)
+                            .copy())
+        state_gdf = (state_gdf.to_crs(epsg=4326)
+                              .copy())
+        
+        # --- Clean BEFORE cast to str ---
+        muni_gdf = muni_gdf.replace({pd.NA: None, "nan": None, "NaN": None})
+        state_gdf = state_gdf.replace({pd.NA: None, "nan": None, "NaN": None})
 
-        # Set PBI identifier
-        gdf_simplified["id"] = gdf_simplified["city_id"].astype(str)
+        # --- Ensure padded state IDs ---
+        muni_gdf["state_id"] = muni_gdf["state_id"].astype(str).str.zfill(2)
+        state_gdf["state_id"] = state_gdf["state_id"].astype(str).str.zfill(2)
 
-        # Convert to TopoJSON
-        topo = tp.Topology(gdf_simplified, prequantize=False)
-        # Export as TopoJSON
-        topo_json = topo.to_json()
+        # --- Convert all string fields safely ---
+        for df in [muni_gdf, state_gdf]:
+            for col in ["city_id", "state_id", "city_name", "state_name"]:
+                if col in df.columns:
+                    df[col] = df[col].astype(str).str.replace(".0", "", regex=False)
+
+        # --- Hierarchy ---
+        state_gdf["id"] = state_gdf["state_id"]
+        muni_gdf["id"] = muni_gdf["city_id"]
+
+        muni_gdf["parent"] = muni_gdf["state_id"]
+        state_gdf["parent"] = ""
+
+        # --- Simplify geometry ---
+        muni_gdf["geometry"]  = muni_gdf.geometry.simplify(0.03)
+        state_gdf["geometry"] = state_gdf.geometry.simplify(0.03)
+
+        # --- Final combined GDF ---
+        keep = ["id","city_id","state_id","city_name","state_name","parent","geometry"]
+        pbi_gdf = pd.concat([state_gdf, muni_gdf], ignore_index=True)[keep]
+        pbi_gdf = gpd.GeoDataFrame(pbi_gdf, geometry="geometry", crs=4326)
+
+        # --- Convert to JSON ---
+        topo = tp.Topology(pbi_gdf, prequantize=False)
+        topo_json = topo.to_json().replace("NaN", '""')
         return topo_json
     except Exception as e:
         logger.error(f"Error converting to TopoJSON: {e}")

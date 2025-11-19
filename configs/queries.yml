@@ -1,6 +1,6 @@
 bronze_queries:  
   population: |
-    SELECT id_municipio, sigla_uf, ano, populacao
+    SELECT id_municipio, ano, populacao
     FROM `basedosdados.br_ibge_populacao.municipio`
     WHERE ano IN (2017, 2019)
   gdp: |
@@ -8,20 +8,20 @@ bronze_queries:
     FROM `basedosdados.br_ibge_pib.municipio`
     WHERE ano IN (2017, 2019)
   education_spending: |
-    SELECT id_municipio, sigla_uf, ano, valor
+    SELECT id_municipio, ano, valor
     FROM `basedosdados.br_me_siconfi.municipio_despesas_funcao`
     WHERE ano IN (2017, 2019)
     AND estagio = 'Despesas Pagas'
     AND conta = 'Educação'
   enrollments: |
-    SELECT id_municipio, sigla_uf, ano, SUM(quantidade_matricula) as quantidade_matricula
+    SELECT id_municipio, ano, SUM(quantidade_matricula) as quantidade_matricula
     FROM `basedosdados.br_inep_sinopse_estatistica_educacao_basica.etapa_ensino_serie`
     WHERE ano IN (2017, 2019)
     AND rede = 'Municipal'
     AND etapa_ensino LIKE 'Ensino Fundamental%' 
-    GROUP BY id_municipio, sigla_uf, ano
+    GROUP BY id_municipio, ano
   ideb: |
-    SELECT id_municipio, sigla_uf, ano, anos_escolares, ideb
+    SELECT id_municipio, ano, anos_escolares, ideb
     FROM `basedosdados.br_inep_ideb.municipio`
     WHERE ano IN (2017, 2019)
     AND ensino = 'fundamental'
@@ -40,7 +40,6 @@ silver:
     populacao AS (
       SELECT
         id_municipio,
-        sigla_uf,
         ano,
         CASE
           WHEN SAFE_CAST(populacao AS INT64) = 0 THEN NULL
@@ -55,7 +54,9 @@ silver:
     name AS (
       SELECT 
         id_municipio,
-        nome
+        nome,
+        id_uf,
+        nome_uf
       FROM `basedosdados.br_bd_diretorios_brasil.municipio`
     ),
 
@@ -77,7 +78,6 @@ silver:
     gastos_educ AS (
       SELECT 
         id_municipio,
-        sigla_uf,
         ano,
         CASE
           WHEN SAFE_CAST(valor AS INT64) = 0 THEN NULL
@@ -95,7 +95,6 @@ silver:
       WITH validated_data AS (
         SELECT
           id_municipio,
-          sigla_uf,
           ano,
           CASE
             WHEN SAFE_CAST(quantidade_matricula AS INT64) IS NULL THEN NULL
@@ -109,11 +108,10 @@ silver:
       )
       SELECT 
         id_municipio,
-        sigla_uf,
         ano,
         SUM(validated_matricula) as quantidade_matricula
       FROM validated_data
-      GROUP BY id_municipio, sigla_uf, ano
+      GROUP BY id_municipio, ano
     ),
 
     -- IDEB scores
@@ -121,7 +119,6 @@ silver:
       WITH validated_data AS (
         SELECT
           id_municipio,
-          sigla_uf,
           ano,
           anos_escolares,
           CASE
@@ -137,12 +134,11 @@ silver:
       )
       SELECT
         id_municipio,
-        sigla_uf,
         ano,
         MAX(CASE WHEN anos_escolares = 'iniciais (1-5)' THEN validated_ideb END) AS ideb_iniciais,
         MAX(CASE WHEN anos_escolares = 'finais (6-9)' THEN validated_ideb END) AS ideb_finais
       FROM validated_data
-      GROUP BY id_municipio, sigla_uf, ano
+      GROUP BY id_municipio, ano
     ),
 
     -- Abandonment rates
@@ -169,10 +165,11 @@ silver:
     -- Final combined query
     SELECT 
       p.id_municipio AS city_id,
-      p.sigla_uf AS state,
       p.ano AS year,
       p.populacao AS population,
       n.nome AS city_name,
+      n.id_uf AS state_id,
+      n.nome_uf AS state_name,
       pb.pib AS gdp,
       ge.valor AS education_spending,
       m.quantidade_matricula AS enrollments,

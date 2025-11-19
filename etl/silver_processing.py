@@ -194,9 +194,9 @@ def process_silver_data() -> Optional[bd.Table]:
         silver_df = add_completeness_flags(silver_df,
                                            value_columns)
 
-        geo_df = fetch_geodata(year=2017)
-        geo_json = geo_df.copy()
-        topo_json = convert_to_topojson(geo_json)
+        muni_gdf, state_gdf = fetch_geodata(year=2017)
+        topo_json = convert_to_topojson(muni_gdf,
+                                        state_gdf)
         save_json(topo_json)
         # silver_df = merge_geodata(silver_df, geo_df)
 

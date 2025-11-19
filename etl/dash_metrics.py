@@ -41,7 +41,7 @@ def eff_rank(df: pd.DataFrame) -> pd.DataFrame:
         # 1-based State-level ranking
         df = df.sort_values(
             by=["year", 
-                "state", 
+                "state_name", 
                 "DEA_vrs_input", 
                 "DEA_scale_efficiency"],
             ascending=[True, 
@@ -49,7 +49,8 @@ def eff_rank(df: pd.DataFrame) -> pd.DataFrame:
                        False, 
                        False],
             ignore_index=True)
-        df["state_rank_vrs"] = (df.groupby(["year", "state"])
+        df["state_rank_vrs"] = (df.groupby(["year",
+                                            "state_name"])
                                   .cumcount() + 1)
 
         return df
@@ -141,9 +142,9 @@ def state_benchmarks(df: pd.DataFrame,
     """
     try:
         df = df.copy()
-        if "state" in gold_df.columns:
+        if "state_name" in gold_df.columns:
             state_avg = (gold_df.groupby(["year",
-                                          "state"])
+                                          "state_name"])
                             [["DEA_vrs_input",
                               "DEA_scale_efficiency"]]
                             .mean()
@@ -151,7 +152,7 @@ def state_benchmarks(df: pd.DataFrame,
                             .rename(columns={"DEA_vrs_input": "state_avg_vrs",
                                              "DEA_scale_efficiency": "state_avg_scale"}))
             df = df.merge(state_avg, on=["year",
-                                         "state"],
+                                         "state_name"],
                                      how="left")
         return df
     except Exception as e:
