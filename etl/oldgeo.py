@@ -1,12 +1,11 @@
 """
-Geodata fetching, processing, simplification, and export
-of Brazilian boundary data as optimized TopoJSON.
+Geodata fetching, cleaning, and exporting Brazilian geospatial data
+as TopoJSON for analytical consumption
 """
 
 import os
 import logging
 from pathlib import Path
-from typing import Dict, Tuple, List
 import pandas as pd
 import geopandas as gpd
 import geobr
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------
 # Config Loading
 # ---------------------------------------------------------------------
-def load_configs(config_path: str = "configs/path.yml") -> Dict:
+def load_configs(config_path: str = "configs/path.yml") -> dict:
     """
     Load YAML configuration for paths and layers.
     Args:
@@ -58,16 +57,16 @@ def setup_gcp_bd() -> str:
 # Geodata Extraction and Merging
 # ---------------------------------------------------------------------
 
-def fetch_geodata(year: int = 2017) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
+def fetch_geodata(year: int) -> gpd.GeoDataFrame:
     """
-    Load municipal and state geometries from geobr.
+    Fetch geodata for Brazilian states and municipalities from geobr.
     Args:
-        year (int): Reference year for geobr shapes.
+        year (int): Reference year for boundaries (default: 2019).
     Returns:
-        Tuple[GeoDataFrame, GeoDataFrame]:
-            Municipalities and states GeoDataFrames.
+        muni_gdf: GeoDataFrame (municipalities)
+        state_gdf: GeoDataFrame (states)
     Raises:
-        Exception: For unexpected errors fetching geobr data.
+        Exception: If fetching geodata fails.
     """
     try:
         muni_gdf = geobr.read_municipality(code_muni = "all",
@@ -86,74 +85,107 @@ def fetch_geodata(year: int = 2017) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]
         logger.error(f"Error fetching geobr data: {e}")
         raise
 
-# ---------------------------------------------------------------------
-# Cleaning helper
-# ---------------------------------------------------------------------
-def clean_geodata(df: gpd.GeoDataFrame, cols: List[str]) -> gpd.GeoDataFrame:
-    """
-    Normalize identifier columns and remove NaN-like values.
-    Args:
-        df (GeoDataFrame): Input dataset.
-    Returns:
-        GeoDataFrame: Cleaned dataset.
-    Raises:
-        Exception: For unexpected errors cleaning data.
-    """
-    try:
-        df = df.copy()
-        df = df.replace({pd.NA: None, 
-                         "nan": None, 
-                         "NaN": None})
-        for col in cols:
-            if col in df.columns:
-                df[col] = (df[col]
-                           .astype(str)
-                           .str.replace(".0", "", regex=False)
-                           .str.strip()
-                          )
-        if "state_id" in df.columns:
-            df["state_id"] = df["state_id"].str.zfill(2)
-        return df
-    except Exception as e:
-        logger.error(f"Error cleaning geodata: {e}")
-        raise
+# def merge_geodata(data : pd.DataFrame,
+#                   geodata : gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+#     """
+#     Merge the analytical dataset with municipality geodata.
+#     Args:
+#         df (pd.DataFrame): Silver-layer analytical dataset with `city_id` column.
+#         geodata (gpd.GeoDataFrame): Municipality polygons from geobr.
+#     Returns:
+#         gpd.GeoDataFrame: Enriched dataset with geometries.
+#     Raises:
+#         Exception: If merging geodata fails.
+#     """
+#     try:
+#         df = data.copy()
+#         df["city_id_int"] = df["city_id"].astype(str).astype(int)
+#         geodata["code_muni"] = geodata["code_muni"].astype(int)
 
-def prepare_geodata(muni_gdf: gpd.GeoDataFrame,
-                    state_gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+#         merged_map = df.merge(geodata[["code_muni", "geometry"]],
+#                               how="left",
+#                               left_on="city_id_int",
+#                               right_on="code_muni")
+#         merged_map = merged_map.drop(columns=["city_id_int", "code_muni"])
+
+#         merged_map = gpd.GeoDataFrame(merged_map,
+#                                       geometry = "geometry",
+#                                       crs = geodata.crs)
+#         merged_map["geometry"] = merged_map.geometry.simplify(tolerance = 0.01)
+#         return merged_map
+#     except Exception as e:
+#         logger.error(f"Error merging geobr data: {e}")
+#         raise
+
+# ---------------------------------------------------------------------
+# Cleaning helpers
+# ---------------------------------------------------------------------
+def clean_strings(df: pd.DataFrame, cols: list):
+    """Remove NaNs and enforce string dtype."""
+    df = df.replace({pd.NA: None, "nan": None, "NaN": None})
+    for col in cols:
+        if col in df.columns:
+            df[col] = (
+                df[col]
+                .astype(str)
+                .str.replace(".0", "", regex=False)
+                .str.strip()
+            )
+    return df
+
+def pad_state_id(df):
+    """Ensure state_id is always 2 digits."""
+    df["state_id"] = df["state_id"].astype(str).str.zfill(2)
+    return df
+
+def simplify_geometries(df, tolerance=0.03):
+    """Simplify geometries to reduce file size."""
+    df["geometry"] = df.geometry.simplify(tolerance)
+    return df
+
+# ---------------------------------------------------------------------
+# Geodata JSON Conversion and Export
+# ---------------------------------------------------------------------
+def convert_to_topojson(muni_gdf: gpd.GeoDataFrame,
+                        state_gdf: gpd.GeoDataFrame,) -> str:
     """
-    Final preparation for TopoJSON:
-        - project to WGS84
-        - clean identifiers
-        - assign hierarchical IDs
-        - combine states + municipalities
+    Convert GeoDataFrame to TopoJSON for Power BI.
     Args:
-        muni_gdf (GeoDataFrame): Municipality shapes.
-        state_gdf (GeoDataFrame): State shapes.
+        muni_gdf: GeoDataFrame with municipality geometries
+        state_gdf: GeoDataFrame with state geometries
     Returns:
-        GeoDataFrame: Combined hierarchical dataset.
+        topo_json: str: TopoJSON file as string
     Raises:
-        Exception: For unexpected errors preparing geobr data.
-    """    
+        Exception: If converting geodata fails.
+    """
     try:
-        # Convert to standard CRS first
         muni_gdf = (muni_gdf.to_crs(epsg=4326)
                             .copy())
         state_gdf = (state_gdf.to_crs(epsg=4326)
                               .copy())
-        # Clean string columns
-        muni_gdf = clean_geodata(muni_gdf, ["city_id",
+        
+        # Clean & type normalize
+        muni_gdf = clean_strings(muni_gdf, ["city_id",
                                             "state_id",
                                             "city_name", 
                                             "state_name"])
-        state_gdf = clean_geodata(state_gdf, ["state_id", 
+        state_gdf = clean_strings(state_gdf, ["state_id", 
                                               "state_name"])
+
+        muni_gdf = pad_state_id(muni_gdf)
+        state_gdf = pad_state_id(state_gdf)
+
         # Define hierarchy
         state_gdf["id"] = state_gdf["state_id"]
         muni_gdf["id"] = muni_gdf["city_id"]
+
         state_gdf["parent"] = ""
         muni_gdf["parent"] = muni_gdf["state_id"]
-        state_gdf["city_id"] = ""
-        state_gdf["city_name"] = ""
+
+        # Simplify shapes
+        muni_gdf = simplify_geometries(muni_gdf)
+        state_gdf = simplify_geometries(state_gdf)
+
         # Combine into one unified table
         keep = ["id", 
                 "city_id", 
@@ -162,43 +194,12 @@ def prepare_geodata(muni_gdf: gpd.GeoDataFrame,
                 "state_name", 
                 "parent", 
                 "geometry"]
-        combined_gdf = pd.concat([state_gdf, 
-                                  muni_gdf], 
-                                 ignore_index=True
-                                )[keep]
-        combined_gdf = gpd.GeoDataFrame(combined_gdf, 
-                                        geometry="geometry", 
-                                        crs=4326)
-        return combined_gdf
-    except Exception as e:
-        logger.error(f"Error preparing geodata: {e}")
-        raise
-
-# ---------------------------------------------------------------------
-# Geodata JSON Conversion and Export
-# ---------------------------------------------------------------------
-def convert_geodata(muni_gdf: gpd.GeoDataFrame, 
-                    state_gdf: gpd.GeoDataFrame) -> str:
-    """
-    Convert combined geodata into TopoJSON.
-    Args:
-        muni_gdf (GeoDataFrame): Municipalities.
-        state_gdf (GeoDataFrame): States.
-    Returns:
-        str: TopoJSON text.
-    Raises:
-        Exception: If conversion fails.
-    """
-    try:
-        combined_gdf = prepare_geodata(muni_gdf, 
-                                       state_gdf)
-        combined_gdf["geometry"] = combined_gdf.geometry.simplify(tolerance=0.03)
+        combined = pd.concat([state_gdf, muni_gdf], ignore_index=True)[keep]
+        combined = gpd.GeoDataFrame(combined, geometry="geometry", crs=4326)
 
         # Export to TopoJSON
-        topo = tp.Topology(combined_gdf, 
-                           prequantize=1e5)
-        topo_json = (topo.to_json()
-                         .replace("NaN", '""'))
+        topo = tp.Topology(combined, prequantize=False)
+        topo_json = topo.to_json().replace("NaN", '""')
         return topo_json
     except Exception as e:
         logger.error(f"Error converting to TopoJSON: {e}")
@@ -208,9 +209,9 @@ def save_json(topo_json: str) -> None:
     """
     Save TopoJSON file locally and to GCS.
     Args:
-        topo_json (str): JSON topology to save.
+        topo_json str: TopoJSON file generated by convert_to_topojson()
     Raises:
-        Exception: If file cannot be saved or uploaded.
+        Exception: For other unexpected errors.
     """
     try:
         paths = load_configs()
@@ -233,25 +234,4 @@ def save_json(topo_json: str) -> None:
         print(f"geodata saved as JSON")
     except Exception as e:
         logger.error(f"Error saving JSON: {e}")
-        raise
-
-def geographical_features(year: int = 2017) -> str:
-    """
-    Geographical workflow for B.I. consumption:
-    load, prepare, convert, save.
-    Args:
-        year (int): Reference year.
-    Returns:
-        str: Produced TopoJSON.
-    Raises:
-        Exception: For any pipeline-level failure.
-    """
-    try:
-        muni_gdf, state_gdf = fetch_geodata(year)
-        topo_json = convert_geodata(muni_gdf, 
-                                    state_gdf)
-        save_json(topo_json)
-        return topo_json
-    except Exception as e:
-        logger.error(f"Error in geographical_features: {e}")
         raise
