@@ -184,7 +184,9 @@ def derived_metrics(subset: pd.DataFrame,
         df["DEA_irs_input"] = dea_results["irs_input"]
         df["DEA_drs_input"] = dea_results["drs_input"]
 
-        df["DEA_scale_efficiency"] = df["DEA_crs_input"] / df["DEA_vrs_input"]
+        df["DEA_scale_efficiency"] = (
+        df["DEA_crs_input"] / df["DEA_vrs_input"].replace(0, np.nan)
+        ).fillna(0)
 
         df["DEA_returns_nature"] = np.where(
             df["DEA_crs_input"] == df["DEA_vrs_input"], "Constant",
@@ -204,7 +206,7 @@ def derived_metrics(subset: pd.DataFrame,
         raise
 
 def results_wrapper(df_full: pd.DataFrame,
-                    dea_results: List[pd.DataFrame]) -> pd.DataFrame:
+                    dea_results: pd.DataFrame) -> pd.DataFrame:
     """
     Merge DEA results back into the full DataFrame.
     Args:
@@ -216,7 +218,9 @@ def results_wrapper(df_full: pd.DataFrame,
         Exception: For other unexpected errors
     """
     try:
-        merge_cols = [c for c in dea_results.columns if c not in df_full.columns] + ["city_id", "year"]
+        merge_cols = ["city_id", "year"] + [c for c in dea_results.columns
+            if c not in ["city_id", "year"] and c not in df_full.columns
+                    ]
         gold_df = df_full.merge(
             dea_results[merge_cols],
             on=["city_id",

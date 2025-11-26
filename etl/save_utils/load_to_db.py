@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 import pandas as pd
 import yaml
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -66,7 +66,8 @@ def create_neon_connection():
     return engine
 
 def load_to_neon(df: pd.DataFrame = None,
-                 table_name: str = "DEA_python") -> bool:
+                 table_name: str = "dea_python",
+                 schema: str = "public") -> bool:
     """
     Load DEApython Gold layer data to a Neon Postgres warehouse.
     Args:
@@ -78,17 +79,46 @@ def load_to_neon(df: pd.DataFrame = None,
         Exception: For other unexpected errors
     """
     try:
-        df = pd.read_parquet(DATA_PATH)
+        if df is None:
+            df = pd.read_parquet(DATA_PATH)
         engine = create_neon_connection()
-        
+
         with engine.begin() as conn:
-            df.to_sql(table_name, 
-                    conn, 
-                    if_exists="replace", 
-                    index=False, 
-                    method="multi")
+            df.to_sql(table_name.lower(), 
+                      conn, 
+                      if_exists="replace", 
+                      index=False, 
+                      method="multi")
         print(f"Loaded {len(df)} rows to {table_name}")
+
+        create_view(engine,
+                    source_table=table_name.lower(),
+                    view_name=f"{table_name.lower()}_clean")
         return True
     except Exception as e:
         logger.error(f"Failed to load data to data warehouse: {e}")
+        raise
+
+def create_view(engine, 
+                source_table: str, 
+                view_name: str,
+                schema: str = "public"):
+    """
+    Create or replace a filtered view for DEA metrics completeness.
+    Only includes cities/years with non-null DEA results.
+    """
+    view_sql = f"""
+        CREATE OR REPLACE VIEW {schema}.{view_name} AS
+        SELECT *
+        FROM {schema}.{source_table}
+        WHERE "DEA_vrs_input" IS NOT NULL
+          AND "DEA_weighted_input" IS NOT NULL
+          AND "DEA_weighted_output" IS NOT NULL;
+    """
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(view_sql))
+        print(f"Created {schema}.{view_name} view")
+    except Exception as e:
+        logger.error(f"Failed to create view {schema}.{view_name}: {e}")
         raise

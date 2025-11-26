@@ -44,6 +44,8 @@ def frontier_composites(df: pd.DataFrame) -> pd.DataFrame:
 
         df["DEA_weighted_input"] = weighted_inputs
         df["DEA_weighted_output"] = weighted_outputs
+        df["DEA_frontier_output"] = (df["DEA_scale_efficiency"] * df["DEA_weighted_output"]
+                                    )
         return df
     except Exception as e:
         logger.error(f"Error in data ranking: {e}")

@@ -124,7 +124,7 @@ gold_schema = DataFrameSchema({
     # "DEA_crs_output": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_vrs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
     # "DEA_vrs_output": Column(float, nullable=True, checks=Check.between(0, 1)),
-    # "DEA_irs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
+    "DEA_irs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_drs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_scale_efficiency": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_returns_nature": Column(str, nullable=True, checks=Check.isin(["Constant", "Increasing", "Decreasing"])),
