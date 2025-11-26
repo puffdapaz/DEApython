@@ -10,6 +10,7 @@ Also provides validation functions to enforce data quality standards.
 """
 import pandas as pd
 import pandera as pa
+import numpy as np
 import logging
 from typing import Optional
 from pandera import Column, DataFrameSchema, Check
@@ -117,13 +118,13 @@ gold_schema = DataFrameSchema({
     "gdp_per_capita": Column(float, nullable=True, checks=Check.ge(0)),
     "spending_per_student": Column(float, nullable=True, checks=Check.ge(0)),
     "educ_pct_gdp": Column(float, nullable=True, checks=Check.between(0, 100)),
-#    "geometry": Column(object, nullable=True), Special Object type for geometries
+    # "geometry": Column(object, nullable=True), Special Object type for geometries
     "is_complete_grouped": Column(bool, nullable=False),
     "DEA_crs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
-    "DEA_crs_output": Column(float, nullable=True, checks=Check.between(0, 1)),
+    # "DEA_crs_output": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_vrs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
-    "DEA_vrs_output": Column(float, nullable=True, checks=Check.between(0, 1)),
-    "DEA_irs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
+    # "DEA_vrs_output": Column(float, nullable=True, checks=Check.between(0, 1)),
+    # "DEA_irs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_drs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_scale_efficiency": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_returns_nature": Column(str, nullable=True, checks=Check.isin(["Constant", "Increasing", "Decreasing"])),

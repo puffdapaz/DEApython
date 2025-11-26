@@ -137,12 +137,26 @@ def run_dea_models(X: np.ndarray,
     """
     dea_results = {}
     try:
-        dea_results["crs_input"] = dea(X, Y, rts=RTS.crs, orientation=Orientation.input).eff
-        dea_results["crs_output"] = 1.0 / dea(X, Y, rts=RTS.crs, orientation=Orientation.output).eff
-        dea_results["vrs_input"] = dea(X, Y, rts=RTS.vrs, orientation=Orientation.input).eff
-        dea_results["vrs_output"] = 1.0 / dea(X, Y, rts=RTS.vrs, orientation=Orientation.output).eff
-        dea_results["irs_input"] = dea(X, Y, rts=RTS.irs, orientation=Orientation.input).eff
-        dea_results["drs_input"] = dea(X, Y, rts=RTS.drs, orientation=Orientation.input).eff
+        # CRS
+        crs_input  = dea(X, Y, rts=RTS.crs, orientation=Orientation.input)
+        # crs_output = dea(X, Y, rts=RTS.crs, orientation=Orientation.output)
+        # VRS
+        vrs_input  = dea(X, Y, rts=RTS.vrs, orientation=Orientation.input)
+        # vrs_output = dea(X, Y, rts=RTS.vrs, orientation=Orientation.output)
+        # IRS / DRS
+        irs_input  = dea(X, Y, rts=RTS.irs, orientation=Orientation.input)
+        drs_input  = dea(X, Y, rts=RTS.drs, orientation=Orientation.input)
+
+        # Assign efficiency
+        dea_results["crs_input"] = crs_input.eff
+        # dea_results["crs_output"] = 1.0 / crs_output.eff
+        dea_results["vrs_input"] = vrs_input.eff
+        # dea_results["vrs_output"] = 1.0 / vrs_output.eff
+        dea_results["irs_input"] = irs_input.eff
+        dea_results["drs_input"] = drs_input.eff
+        # Weights for frontier plotting (Power BI) 
+        dea_results["vrs_input_ux"] = vrs_input.ux 
+        dea_results["vrs_input_vy"] = vrs_input.vy
         return dea_results
     except Exception as e:
         logger.error(f"Error running DEA models: {e}")
@@ -161,17 +175,30 @@ def derived_metrics(subset: pd.DataFrame,
         Exception: For other unexpected errors
     """
     try:
-        result_df = subset.copy()
-        eff = dict(dea_results)
-        eff["scale_efficiency"] = eff["crs_input"] / eff["vrs_input"]
+        df = subset.copy()
 
-        returns_nature = np.where(
-            eff["crs_input"] == eff["vrs_input"], "Constant",
-            np.where(eff["drs_input"] == eff["vrs_input"], "Decreasing", "Increasing"))
-        for k, arr in eff.items():
-            result_df[f"DEA_{k}"] = arr
-        result_df["DEA_returns_nature"] = returns_nature
-        return result_df
+        df["DEA_crs_input"] = dea_results["crs_input"]
+        # df["DEA_crs_output"] = dea_results["crs_output"]
+        df["DEA_vrs_input"] = dea_results["vrs_input"]
+        # df["DEA_vrs_output"] = dea_results["vrs_output"]
+        df["DEA_irs_input"] = dea_results["irs_input"]
+        df["DEA_drs_input"] = dea_results["drs_input"]
+
+        df["DEA_scale_efficiency"] = df["DEA_crs_input"] / df["DEA_vrs_input"]
+
+        df["DEA_returns_nature"] = np.where(
+            df["DEA_crs_input"] == df["DEA_vrs_input"], "Constant",
+            np.where(df["DEA_drs_input"] == df["DEA_vrs_input"], "Decreasing", "Increasing")
+        )
+
+        # Expand input weights vy
+        for i in range(dea_results["vrs_input_vy"].shape[1]):
+            df[f"DEA_vrs_input_vy_{i}"] = dea_results["vrs_input_vy"][:, i]
+
+        # Expand output weights ux
+        for j in range(dea_results["vrs_input_ux"].shape[1]):
+            df[f"DEA_vrs_input_ux_{j}"] = dea_results["vrs_input_ux"][:, j]
+        return df
     except Exception as e:
         logger.error(f"Error calculating derived metrics: {e}")
         raise
@@ -313,7 +340,11 @@ def model_gold_data() -> Optional[pd.DataFrame]:
         df_full = load_gold_data()
         gold_df = run_gold_model(df_full)
         gold_df = analytical_features(gold_df)
-
+        # Remove weight fields
+        drop_cols = [c for c in gold_df.columns 
+             if c.startswith("DEA_vrs_input_ux_") or 
+                c.startswith("DEA_vrs_input_vy_")]
+        gold_df = gold_df.drop(columns=drop_cols, errors="ignore")
         validate_gold(gold_df)
         run_diagnostics(gold_df)
 
