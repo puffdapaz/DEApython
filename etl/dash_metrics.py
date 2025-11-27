@@ -3,7 +3,6 @@ Benchmarking and analytical feature engineering for DEA results.
 Used to enrich the Gold layer dataset with comparative, temporal, and categorical indicators.
 """
 import logging
-import numpy as np
 import pandas as pd
 
 # ---------------------------------------------------------------------
@@ -12,44 +11,6 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------
-# Frontier Plot Functions
-# ---------------------------------------------------------------------
-def frontier_composites(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Build DEA composite input/output metrics for frontier plotting.
-    Works even if the number of outputs varies by year.
-    """
-    try:
-        df = df.copy()
-
-        # 1. Extract input weights (always 2)
-        vy = df[[c for c in df.columns if c.startswith("DEA_vrs_input_vy_")]].to_numpy()
-        # 2. Extract output weights (variable length)
-        ux = df[[c for c in df.columns if c.startswith("DEA_vrs_input_ux_")]].to_numpy()
-        # 3. Extract output columns in the SAME order you created Y
-        outputs = np.column_stack([df["ideb_initial_years"],
-                                   df["ideb_final_years"],
-                                   100 - df["dropout_rates_initial_years"],
-                                   100 - df["dropout_rates_final_years"]
-                                ])
-        # But ux may have fewer columns → select only the first ux.shape[1]
-        outputs = outputs[:, :ux.shape[1]]
-
-        # 4. Compute weighted composites
-        weighted_inputs = (df["gdp_per_capita"] * vy[:, 0] +
-                           df["spending_per_student"] * vy[:, 1]
-                        )
-        weighted_outputs = (outputs * ux).sum(axis=1)
-
-        df["DEA_weighted_input"] = weighted_inputs
-        df["DEA_weighted_output"] = weighted_outputs
-        df["DEA_frontier_output"] = (df["DEA_scale_efficiency"] * df["DEA_weighted_output"]
-                                    )
-        return df
-    except Exception as e:
-        logger.error(f"Error in data ranking: {e}")
-        raise
 # ---------------------------------------------------------------------
 # Derived Fields Functions
 # ---------------------------------------------------------------------
@@ -214,14 +175,11 @@ def analytical_features(df: pd.DataFrame) -> pd.DataFrame:
     print("Calculating metrics...")
     try:
         enriched = df.copy()
-        enriched = frontier_composites(enriched)
+        enriched = eff_rank(enriched)
         enriched = yoy_variance(enriched)
         enriched = efficiency_category(enriched)
         enriched = median_deltas(enriched)
-        enriched = eff_rank(enriched)
         enriched = state_benchmarks(enriched, enriched)
-        enriched = (enriched.sort_values(["city_id", "year"])
-                            .reset_index(drop=True))
         return enriched
     except Exception as e:
         logger.error(f"Error in analytical_features: {e}")
