@@ -13,6 +13,7 @@ import pandas as pd
 import numpy as np
 from dotenv import load_dotenv
 from dealib import RTS, Orientation, dea
+from sklearn.preprocessing import MinMaxScaler
 from .dash_metrics import analytical_features
 from .diagnostics.data_validation import gold_schema, validate_data
 from .diagnostics import model_diagnostics as md
@@ -97,7 +98,7 @@ def use_completeness_flags(df_full: pd.DataFrame) -> pd.DataFrame:
 
 def prepare_matrices(subset: pd.DataFrame)-> Tuple[np.ndarray, np.ndarray]:
     """
-    Prepare input and output matrices for DEA analysis.
+    Prepare and scale input and output matrices for DEA analysis.
     Args:
         df: DataFrame containing the data for DEA
     Returns:
@@ -115,6 +116,13 @@ def prepare_matrices(subset: pd.DataFrame)-> Tuple[np.ndarray, np.ndarray]:
         Y = np.hstack([y_ideb,
                        abandono_iniciais,
                        abandono_finais])
+        
+        scaler_X = MinMaxScaler()
+        scaler_Y = MinMaxScaler()
+
+        X = scaler_X.fit_transform(X)
+        Y = scaler_Y.fit_transform(Y)
+
         return X, Y
     except Exception as e:
             logger.error(f"Error preparing DEA matrices: {e}")

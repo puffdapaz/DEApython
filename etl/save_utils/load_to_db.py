@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 import pandas as pd
 import yaml
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -65,6 +65,43 @@ def create_neon_connection():
                            connect_args={"sslmode": "require"})
     return engine
 
+def drop_objects(engine):
+    """
+    Drops ALL user tables and views in the connected Postgres database.
+    This ensures a clean environment before loading new data.
+    
+    Args:
+        engine: SQLAlchemy engine connected to Neon.
+    Raises:
+        Exception: If any drop operation fails.
+    """
+    try:
+        with engine.begin() as conn:
+            # Drop views
+            views = conn.execute(text("""
+                SELECT table_schema, table_name 
+                FROM information_schema.views
+                WHERE table_schema NOT IN ('pg_catalog', 'information_schema');
+            """)).fetchall()
+
+            for schema, view in views:
+                conn.execute(text(f'DROP VIEW IF EXISTS "{schema}"."{view}" CASCADE;'))
+
+            # Drop tables
+            tables = conn.execute(text("""
+                SELECT table_schema, table_name
+                FROM information_schema.tables
+                WHERE table_type='BASE TABLE'
+                  AND table_schema NOT IN ('pg_catalog', 'information_schema');
+            """)).fetchall()
+
+            for schema, table in tables:
+                conn.execute(text(f'DROP TABLE IF EXISTS "{schema}"."{table}" CASCADE;'))
+
+    except Exception as e:
+        logger.error(f"Failed to drop existing objects: {e}")
+        raise
+
 def load_to_neon(df: pd.DataFrame = None,
                  table_name: str = "DEA_python") -> bool:
     """
@@ -81,6 +118,8 @@ def load_to_neon(df: pd.DataFrame = None,
         df = pd.read_parquet(DATA_PATH)
         engine = create_neon_connection()
         
+        drop_objects(engine)
+
         with engine.begin() as conn:
             df.to_sql(table_name, 
                     conn, 

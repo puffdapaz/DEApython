@@ -187,7 +187,7 @@ silver:
         ELSE NULL 
     END AS spending_per_student,
       CASE WHEN pb.pib IS NOT NULL AND pb.pib > 0
-        THEN ROUND((SAFE_CAST(ge.valor AS FLOAT64) / SAFE_CAST(pb.pib AS FLOAT64)) * 100, 2)
+        THEN ROUND((SAFE_CAST(ge.valor AS FLOAT64) / SAFE_CAST(pb.pib AS FLOAT64)), 5)
         ELSE NULL
     END AS educ_pct_gdp
     FROM populacao p

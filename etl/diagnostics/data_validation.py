@@ -93,7 +93,6 @@ silver_schema = DataFrameSchema({
     "gdp_per_capita": Column(float, nullable=True, checks=Check.ge(0)),
     "spending_per_student": Column(float, nullable=True, checks=Check.ge(0)),
     "educ_pct_gdp": Column(float, nullable=True, checks=Check.between(0, 100)),
-    # "geometry": Column(object, nullable=True), Special Object type for geometries
     "is_complete_grouped": Column(bool, nullable=False),
 })
 
@@ -116,7 +115,7 @@ gold_schema = DataFrameSchema({
     "dropout_rates_final_years": Column(float, nullable=True, checks=Check.between(0, 100)),
     "gdp_per_capita": Column(float, nullable=True, checks=Check.ge(0)),
     "spending_per_student": Column(float, nullable=True, checks=Check.ge(0)),
-    "educ_pct_gdp": Column(float, nullable=True, checks=Check.between(0, 100)),
+    "educ_pct_gdp": Column(float, nullable=True, checks=Check.between(0, 1)),
     # "geometry": Column(object, nullable=True), Special Object type for geometries
     "is_complete_grouped": Column(bool, nullable=False),
     "DEA_crs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
@@ -127,16 +126,8 @@ gold_schema = DataFrameSchema({
     "DEA_drs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_scale_efficiency": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_returns_nature": Column(str, nullable=True, checks=Check.isin(["Constant", "Increasing", "Decreasing"])),
-    "rank_vrs": Column(int, nullable=True, checks=Check.between(1, 5570)),
-    "state_rank_vrs": Column(int, nullable=True, checks=Check.between(1, 860)),
-    "pct_var_vrs": Column(float, nullable=True, checks=Check.between(-50, 200)),
-    "pct_var_scale": Column(float, nullable=True, checks=Check.between(-50, 200)),
-    "category_vrs": Column(str, nullable=True, checks=Check.isin(["Inefficient", "Moderate", "Efficient"])),
-    "category_scale": Column(str, nullable=True, checks=Check.isin(["Inefficient", "Moderate", "Efficient"])),
-    "delta_vrs_median": Column(float, nullable=True, checks=Check.between(-1, 1)),
-    "delta_scale_median": Column(float, nullable=True, checks=Check.between(-1, 1)),
-    "state_avg_vrs": Column(float, nullable=True, checks=Check.between(0, 1)),
-    "state_avg_scale": Column(float, nullable=True, checks=Check.between(0, 1))
+    "rank_vrs": Column(int, nullable=True, checks=Check.between(0, 5570)),
+    "state_rank_vrs": Column(int, nullable=True, checks=Check.between(0, 860)),
 })
 
 # ---------------------------------------------------------------------
