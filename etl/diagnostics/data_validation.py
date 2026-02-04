@@ -126,6 +126,8 @@ gold_schema = DataFrameSchema({
     "DEA_drs_input": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_scale_efficiency": Column(float, nullable=True, checks=Check.between(0, 1)),
     "DEA_returns_nature": Column(str, nullable=True, checks=Check.isin(["Constant", "Increasing", "Decreasing"])),
+    "national_median_vrs": Column(float, nullable=True, checks=Check.between(0, 1)),
+    "state_avg_vrs": Column(float, nullable=True, checks=Check.between(0, 1)),
     "rank_vrs": Column(int, nullable=True, checks=Check.between(0, 5570)),
     "state_rank_vrs": Column(int, nullable=True, checks=Check.between(0, 860)),
 })

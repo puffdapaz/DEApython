@@ -69,6 +69,53 @@ def eff_rank(df: pd.DataFrame) -> pd.DataFrame:
         logger.error(f"Error in data ranking: {e}")
         raise
 
+def national_median_vrs(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add national median DEA metrics per year.
+    These are reference values (NOT deltas) to be used in visuals
+    such as bullet charts, reference lines, and KPI comparisons.
+    Args:
+        df: Gold DataFrame with DEA results
+    Returns:
+        pd.DataFrame: DataFrame with national median columns added
+    Raises:
+        Exception: For other unexpected errors.
+    """
+    try:
+        df = df.copy()
+        # National median VRS efficiency per year
+        df["national_median_vrs"] = (df.groupby("year")["DEA_vrs_input"]
+                                       .transform("median")
+                                    )
+        return df
+    except Exception as e:
+        logger.error(f"Error calculating national medians: {e}")
+        raise
+
+def state_avg_vrs(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculate state-level yearly average for DEA VRS Input efficiency.
+    Args:
+        df: Gold DataFrame containing DEA results with at least:
+            - 'state' (state identifier)
+            - 'year'
+            - 'DEA_vrs_input'
+    Returns:
+        pd.DataFrame: Original DataFrame with new column:
+            - 'state_avg_vrs'
+    Raises:
+        Exception: For other unexpected errors.
+    """
+    try:
+        df = df.copy()
+        df["state_avg_vrs"] = (df.groupby(["state_id", "year"])["DEA_vrs_input"]
+                                 .transform("mean")
+                            )
+        return df
+    except Exception as e:
+        logger.error(f"Error calculating state average VRS: {e}")
+        raise
+
 # ---------------------------------------------------------------------
 # Main Workflow Function
 # ---------------------------------------------------------------------
@@ -86,6 +133,8 @@ def analytical_features(df: pd.DataFrame) -> pd.DataFrame:
     try:
         enriched = df.copy()
         enriched = eff_rank(enriched)
+        enriched = national_median_vrs(enriched)
+        enriched = state_avg_vrs(enriched)
         return enriched
     except Exception as e:
         logger.error(f"Error in analytical_features: {e}")
