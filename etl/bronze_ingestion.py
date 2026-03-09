@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------
 # Config Loading
 # ---------------------------------------------------------------------
-def load_configs(config_path: str = "configs/path.yml") -> Dict[str, str]:
+def load_configs(config_path: str = "configs/path.yaml") -> Dict[str, str]:
     """
     Load YAML configuration for paths and layers.
     Args:
@@ -66,7 +66,7 @@ def load_bronze_data(layer: str = "bronze") -> Dict[str, str]:
         Exception: For other unexpected errors
     """
     try:
-        with open("configs/queries.yml",
+        with open("configs/queries.yaml",
                   "r",
                   encoding="utf-8") as f:
             all_queries = yaml.safe_load(f)

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------
 # Config Loading
 # ---------------------------------------------------------------------
-def load_configs(config_path: str = "configs/path.yml") -> dict:
+def load_configs(config_path: str = "configs/path.yaml") -> dict:
     """
     Load YAML configuration for paths and layers.
     Args:
@@ -75,12 +75,12 @@ def analyze_data(df: pd.DataFrame,
         if df is None:
             logger.warning(f"No DataFrame provided for {name} analysis.")
             return
-        print(f"{name} data analysis:")
+        # print(f"{name} data analysis:")
         for year in sorted(df['year'].unique()):
             year_data = df[df['year'] == year]
-            print(year, f"{name} records:", len(year_data))
-            print("\n%s", year_data.describe().to_string())
-            print("\n%s", year_data.corr(numeric_only=True).to_string())
+            # print(year, f"{name} records:", len(year_data))
+            # print("\n%s", year_data.describe().to_string())
+            # print("\n%s", year_data.corr(numeric_only=True).to_string())
     except Exception as e:
         logger.error(f"Error analyzing data: {e}")
         raise
@@ -204,22 +204,28 @@ def log_test_results(test_name: str,
         indent: Current indentation level for formatting.
     Returns:
         Formatted string representation of results.
+    Raises:
+        Exception: For other unexpected errors
     """
-    prefix = " " * indent
-    print(f"{prefix} {test_name} Results")
-    if isinstance(results, dict):
-        for k, v in results.items():
-            if isinstance(v, dict):
-                log_test_results(k, v, indent + 3)
-            else:
-                if isinstance(v, float):
-                    print(f"{prefix}   {k}: {v:.4f}")
-                else:
-                    print(f"{prefix}   {k}: {v}")
-    else:
-        print(f"{prefix}   {results}")
-    if indent == 0:
-        print("-" * 40)
+    try:
+        # prefix = " " * indent
+        # print(f"{prefix} {test_name} Results")
+        if isinstance(results, dict):
+            for k, v in results.items():
+                if isinstance(v, dict):
+                    return log_test_results(k, v, indent + 3)
+        #         else:
+        #             if isinstance(v, float):
+        #                 print(f"{prefix}   {k}: {v:.4f}")
+        #             else:
+        #                 print(f"{prefix}   {k}: {v}")
+        # else:
+        #     print(f"{prefix}   {results}")
+        # if indent == 0:
+        #     print("-" * 40)
+    except Exception as e:
+        logger.error(f"Error logging data: {e}")
+        raise
 
 # ---------------------------------------------------------------------
 # Diagnostics Runner

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------
 # Config Loading
 # ---------------------------------------------------------------------
-def load_configs(config_path: str = "configs/path.yml") -> dict:
+def load_configs(config_path: str = "configs/path.yaml") -> dict:
     """
     Load YAML configuration for paths and layers.
     Args:
@@ -65,7 +65,7 @@ def load_silver_data() -> str:
         Exception: For other unexpected errors
     """
     try:
-        with open("configs/queries.yml",
+        with open("configs/queries.yaml",
                   "r",
                   encoding="utf-8") as f:
             query = yaml.safe_load(f)

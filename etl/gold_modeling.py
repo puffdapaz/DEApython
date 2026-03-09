@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------
 # Config Loading
 # ---------------------------------------------------------------------
-def load_configs(config_path: str = "configs/path.yml") -> dict:
+def load_configs(config_path: str = "configs/path.yaml") -> dict:
     """
     Load YAML configuration for paths and layers.
     Args:

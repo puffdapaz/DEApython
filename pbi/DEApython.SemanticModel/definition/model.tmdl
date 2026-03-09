@@ -1,0 +1,23 @@
+model Model
+	culture: en-US
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	sourceQueryCulture: pt-BR
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 1
+
+annotation PBI_ProTooling = ["DevMode","TMDLView_Desktop"]
+
+annotation PBI_QueryOrder = ["public DEA_python"]
+
+annotation __TEdtr = 1
+
+ref table 'public DEA_python'
+ref table DateTableTemplate_00c5a583-11d1-4e1f-b792-402b9a36a0a0
+ref table LocalDateTable_9d2fea09-5c2f-4d2c-b60b-4d37abfdf80a
+
+ref cultureInfo en-US
+ref cultureInfo pt-BR
+

@@ -1,0 +1,87 @@
+cultureInfo pt-BR
+	translations
+		model Model
+			table 'public DEA_python'
+				caption: DEA_python
+				description: Base analítica em nível município-ano utilizada como conjunto de Unidades Tomadoras de Decisão (DMUs) para o modelo de Análise Envoltória de Dados (DEA). Cada linha representa um município brasileiro em um ano específico.
+				column city_id
+					caption: id_cidade
+					description =
+						
+						Identificador único do município (chave substituta)
+				column year
+					caption: ano
+					description =
+						
+						Ano de referência das variáveis.
+				column city_name
+					caption: nome_cidade
+					description =
+						
+						Nome oficial do município brasileiro avaliado.
+				column state_id
+					caption: id_estado
+					description =
+						
+						Identificador do estado (UF) à qual o município pertence.
+				column state_name
+					caption: nome_estado
+					description =
+						
+						Nome do estado do município.
+				column spending_per_student
+					caption: gasto_por_aluno
+					description =
+						
+						Gasto público anual em educação por aluno matriculado no município.
+				column educ_pct_gdp
+					caption: percent_pib_educ
+					description =
+						
+						Estimated percentage of municipal GDP allocated to public education.
+				column DEA_vrs_input
+					caption: RVE_insumo
+					description =
+						
+						Escore de eficiência técnica calculado pelo modelo DEA orientado a insumo sob Retornos Variáveis de Escala (VRS).
+				column DEA_scale_efficiency
+					caption: eficiência_escala
+					description =
+						
+						Eficiência de escala do município.
+				column DEA_returns_nature
+					caption: natureza_retornos
+					description =
+						
+						Classificação da natureza dos retornos de escala estimado pelo modelo DEA.
+				column national_median_vrs
+					description =
+						
+						Mediana nacional do escore de eficiência técnica VRS no respectivo ano.
+				column state_avg_vrs
+					description =
+						
+						Média estadual do escore de eficiência técnica VRS no respectivo ano.
+				measure VRS_Label
+					description: Formatação da variação do escore VRS Insumo para fins de visualização e interpretação analítica.
+				measure RankStringEstadual
+					description: Formatação do Ranking Estadual para fins de visualização e interpretação analítica.
+				measure RankStringNacional
+					description: Formatação do Ranking Nacional para fins de visualização e interpretação analítica.
+				measure EFF_Label
+					description: Formatação da variação do escore de Eficiência de Escala para fins de visualização e interpretação analítica.
+				measure NacRank_Label
+					description: Formatação da variação do Ranking Nacional para fins de visualização e interpretação analítica.
+				measure StateRank_Label
+					description: Formatação da variação do Ranking Estadual para fins de visualização e interpretação analítica.
+				measure SpendperStudent_Label
+					description: Formatação da variação do Investimento por Aluno para fins de visualização e interpretação analítica.
+				measure EducPctGDP_Label
+					description: Formatação da variação do Percentual do PIB gasto em Educação para fins de visualização e interpretação analítica.
+				measure VRS_INPUT
+					description: Formatação do escore VRS Insumo para fins de visualização e interpretação analítica.
+				measure SCALE_EFFICIENCY
+					description: Formatação do escore de Escala de Eficiência para fins de visualização e interpretação analítica.
+				measure RETURNS_NATURE
+					description: Formatação da Natureza dos Retornos para fins de visualização e interpretação analítica.
+

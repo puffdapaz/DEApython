@@ -1,0 +1,1154 @@
+/// Analytical dataset at the municipality-year grain used as the Decision Making Units (DMUs) for the Data Envelopment Analysis (DEA) model. Each row represents a Brazilian municipality in a specific year.
+table 'public DEA_python'
+	lineageTag: c1f2c1bc-463e-47e0-a4ed-8492c3743bbf
+
+	measure VRS_Base =
+			
+			VAR FirstYear =
+			    CALCULATE(
+			        MIN('public DEA_python'[year]),
+			        ALLEXCEPT('public DEA_python', 'public DEA_python'[city_id])
+			    )
+			RETURN
+			CALCULATE(
+			    AVERAGE('public DEA_python'[DEA_vrs_input]),
+			    'public DEA_python'[year] = FirstYear
+			)
+		isHidden
+		lineageTag: 935702c0-bbaf-4927-a2d2-99b7e0df1bcf
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure VRS_Current =
+			
+			VAR LastYear =
+			    CALCULATE(
+			        MAX('public DEA_python'[year]),
+			        ALLEXCEPT('public DEA_python', 'public DEA_python'[city_id])
+			    )
+			RETURN
+			CALCULATE(
+			    AVERAGE('public DEA_python'[DEA_vrs_input]),
+			    'public DEA_python'[year] = LastYear
+			)
+		isHidden
+		lineageTag: 355f41ab-262d-4c4b-be4d-bbf5de2aa63a
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure VRS_Trend =
+			
+			VAR Delta = [VRS_Delta]
+			RETURN
+			    SWITCH(
+			        TRUE(),
+			        ISBLANK(Delta), BLANK(),
+			        Delta > 0, "↑",  // Or UNICHAR(9650) for ▲
+			        Delta < 0, "↓",  // Or UNICHAR(9660) for ▼
+			        "→"  // Or UNICHAR(9679) for ●
+			    )
+		isHidden
+		lineageTag: 7ce393b4-b097-413c-934c-1905042ef3bb
+
+		changedProperty = IsHidden
+
+	/// Format for VRS Input score variance visualization and analytical interpretation.
+	measure VRS_Label =
+			
+			VAR Arrow = [VRS_Trend]
+			VAR Delta = [VRS_Delta]
+			RETURN
+			    IF(
+			    NOT ISBLANK(Delta),
+			    Arrow & " " & FORMAT(Delta, "+0.0%;-0.0%;0.0%"),
+			    "0%"
+			)
+		lineageTag: 3c938b92-fa30-42d6-88f2-3cafa2ca2dd4
+
+	/// Format for State Ranking visualization and analytical interpretation.
+	measure RankStringEstadual = ```
+			
+			VAR CurrentState = SELECTEDVALUE('public DEA_python'[state_name])
+			VAR CurrentRank = SELECTEDVALUE('public DEA_python'[state_rank_vrs])
+			VAR CheckField = SELECTEDVALUE('public DEA_python'[DEA_vrs_input])
+			
+			VAR TotalInState = 
+			    IF(
+			        NOT ISBLANK(CurrentState),
+			        CALCULATE(
+			            COUNTROWS('public DEA_python'),
+			            FILTER(
+			                ALL('public DEA_python'),
+			                'public DEA_python'[year] = SELECTEDVALUE('public DEA_python'[year]) &&
+			                'public DEA_python'[state_name] = CurrentState
+			            )
+			        ),
+			        BLANK()
+			    )
+			
+			RETURN
+			    SWITCH(
+			        TRUE(),
+			        ISBLANK(CheckField), "0 / " & TotalInState,
+			        CurrentRank & " / " & TotalInState
+			    )
+			```
+		lineageTag: 273ded80-b584-4200-8f49-19c5751cfff1
+
+	/// Format for National Ranking visualization and analytical interpretation.
+	measure RankStringNacional = ```
+			
+			VAR CurrentRank = SELECTEDVALUE('public DEA_python'[rank_vrs])
+			VAR CheckField = SELECTEDVALUE('public DEA_python'[DEA_vrs_input]) 
+			VAR Total = 
+			    CALCULATE(
+			        COUNTROWS('public DEA_python'),
+			        ALLEXCEPT('public DEA_python', 'public DEA_python'[year])
+			    )
+			RETURN
+			    SWITCH(
+			        TRUE(),
+			        ISBLANK(CheckField), "0 / " & Total,
+			        CurrentRank & " / " & Total
+			    )
+			```
+		lineageTag: c7e4974c-d57e-4000-bc1b-98eba903ac0d
+
+	measure VRS_Delta =
+			
+			VAR Base = [VRS_Base]
+			VAR Latest = [VRS_Current]
+			RETURN
+			IF(
+			    NOT ISBLANK(Base) && NOT ISBLANK(Latest) && Base <> 0,
+			    DIVIDE(Latest - Base, Base)
+			)
+		isHidden
+		lineageTag: 4ddac93f-8dac-4d87-8a7a-74f2afdfa4b0
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure EFF_Base =
+			
+			VAR FirstYear =
+			    CALCULATE(
+			        MIN('public DEA_python'[year]),
+			        ALLEXCEPT('public DEA_python', 'public DEA_python'[city_id])
+			    )
+			RETURN
+			CALCULATE(
+			    AVERAGE('public DEA_python'[DEA_scale_efficiency]),
+			    'public DEA_python'[year] = FirstYear
+			)
+		isHidden
+		lineageTag: 3c293fd2-dc94-43a1-b7d2-9d2950b54c88
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure EFF_Current =
+			
+			VAR LastYear =
+			    CALCULATE(
+			        MAX('public DEA_python'[year]),
+			        ALLEXCEPT('public DEA_python', 'public DEA_python'[city_id])
+			    )
+			RETURN
+			CALCULATE(
+			    AVERAGE('public DEA_python'[DEA_scale_efficiency]),
+			    'public DEA_python'[year] = LastYear
+			)
+		isHidden
+		lineageTag: 4f98e182-420f-4248-bef5-2be9e14b0809
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure EFF_Delta =
+			
+			VAR Base = [EFF_Base]
+			VAR Latest = [EFF_Current]
+			RETURN
+			IF(
+			    NOT ISBLANK(Base) && NOT ISBLANK(Latest) && Base <> 0,
+			    DIVIDE(Latest - Base, Base)
+			)
+		isHidden
+		lineageTag: 608831ae-924a-4168-9ebb-1e6b762ff1c7
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Format for Scale Efficiency score variance visualization and analytical interpretation.
+	measure EFF_Label =
+			
+			VAR Arrow = [EFF_Trend]
+			VAR Delta = [EFF_Delta]
+			RETURN
+			    IF(
+			    NOT ISBLANK(Delta),
+			    Arrow & " " & FORMAT(Delta, "+0.0%;-0.0%;0.0%"),
+			    "0%"
+			)
+		lineageTag: 8194587b-9b26-47e4-aea3-c5977e0f9147
+
+	measure EFF_Trend =
+			
+			VAR Delta = [EFF_Delta]
+			RETURN
+			    SWITCH(
+			        TRUE(),
+			        ISBLANK(Delta), BLANK(),
+			        Delta > 0, "↑",  // Or UNICHAR(9650) for ▲
+			        Delta < 0, "↓",  // Or UNICHAR(9660) for ▼
+			        "→"  // Or UNICHAR(9679) for ●
+			    )
+		isHidden
+		lineageTag: 237c9790-ee75-44ea-a90b-2c42cfe0bfb9
+
+		changedProperty = IsHidden
+
+	measure NacRank_Base =
+			
+			VAR FirstYear =
+			    CALCULATE(
+			        MIN('public DEA_python'[year]),
+			        ALLEXCEPT('public DEA_python', 'public DEA_python'[city_id])
+			    )
+			RETURN
+			CALCULATE(
+			    AVERAGE('public DEA_python'[rank_vrs]),
+			    'public DEA_python'[year] = FirstYear
+			)
+		isHidden
+		lineageTag: 8abb8605-55dd-4dd8-a6de-dcc00108f378
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure NacRank_Current =
+			
+			VAR LastYear =
+			    CALCULATE(
+			        MAX('public DEA_python'[year]),
+			        ALLEXCEPT('public DEA_python', 'public DEA_python'[city_id])
+			    )
+			RETURN
+			CALCULATE(
+			    AVERAGE('public DEA_python'[rank_vrs]),
+			    'public DEA_python'[year] = LastYear
+			)
+		isHidden
+		lineageTag: cba29c98-1924-42c5-a7f3-696e1689bc4a
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure NacRank_Delta =
+			
+			VAR Base = [NacRank_Base]
+			VAR Latest = [NacRank_Current]
+			RETURN
+			IF(
+			    NOT ISBLANK(Base) && NOT ISBLANK(Latest),
+			    Base - Latest
+			)
+		isHidden
+		lineageTag: fca2a432-6614-4aec-94cf-d4f110467c27
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Format for National Ranking variance visualization and analytical interpretation.
+	measure NacRank_Label =
+			
+			VAR VRS_Value = MAX('public DEA_python'[DEA_vrs_input])
+			VAR VRS_IsBlank = ISBLANK(VRS_Value)
+			
+			VAR Arrow = [NacRank_Trend]
+			VAR Delta = [NacRank_Delta]
+			
+			RETURN
+			    SWITCH(
+			        TRUE(),
+			        VRS_IsBlank, "0 pos.",
+			        ISBLANK(Delta), BLANK(),
+			        Arrow & " " & FORMAT(Delta, "0 pos.")
+			    )
+		lineageTag: 35948dd7-3b65-4145-88a5-d0d37719b902
+
+	measure NacRank_Trend =
+			
+			VAR Delta = [NacRank_Delta]
+			RETURN
+			    SWITCH(
+			        TRUE(),
+			        ISBLANK(Delta), BLANK(),
+			        Delta > 0, "↑",  // Or UNICHAR(9650) for ▲
+			        Delta < 0, "↓",  // Or UNICHAR(9660) for ▼
+			        "→"  // Or UNICHAR(9679) for ●
+			    )
+		isHidden
+		lineageTag: c04c995c-c33c-4a21-8083-d22894345b07
+
+		changedProperty = IsHidden
+
+	measure StateRank_Base =
+			
+			VAR FirstYear =
+			    CALCULATE(
+			        MIN('public DEA_python'[year]),
+			        ALLEXCEPT('public DEA_python', 'public DEA_python'[city_id])
+			    )
+			RETURN
+			CALCULATE(
+			    AVERAGE('public DEA_python'[state_rank_vrs]),
+			    'public DEA_python'[year] = FirstYear
+			)
+		isHidden
+		lineageTag: 2766336b-1f2e-4ae0-ba72-442575900302
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure StateRank_Current =
+			
+			VAR LastYear =
+			    CALCULATE(
+			        MAX('public DEA_python'[year]),
+			        ALLEXCEPT('public DEA_python', 'public DEA_python'[city_id])
+			    )
+			RETURN
+			CALCULATE(
+			    AVERAGE('public DEA_python'[state_rank_vrs]),
+			    'public DEA_python'[year] = LastYear
+			)
+		isHidden
+		lineageTag: 7971c4c6-fdd0-4230-8aff-f658092ee78e
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure StateRank_Delta =
+			
+			VAR Base = [StateRank_Base]
+			VAR Latest = [StateRank_Current]
+			RETURN
+			IF(
+			    NOT ISBLANK(Base) && NOT ISBLANK(Latest),
+			    Base - Latest
+			)
+		isHidden
+		lineageTag: 0f84c6fb-88fa-423c-9be9-9c9b0aa4ae2f
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Format for State Ranking variance visualization and analytical interpretation.
+	measure StateRank_Label =
+			
+			
+			VAR VRS_Value = MAX('public DEA_python'[DEA_vrs_input])
+			VAR VRS_IsBlank = ISBLANK(VRS_Value)
+			
+			VAR Arrow = [StateRank_Trend]
+			VAR Delta = [StateRank_Delta]
+			
+			RETURN
+			    SWITCH(
+			        TRUE(),
+			        VRS_IsBlank, "0 pos.",
+			        ISBLANK(Delta), BLANK(),
+			        Arrow & " " & FORMAT(Delta, "0 pos.")
+			    )
+		lineageTag: 1605e68a-0264-4e4d-b4a9-cad33682ed29
+
+	measure StateRank_Trend =
+			
+			VAR Delta = [StateRank_Delta]
+			RETURN
+			    SWITCH(
+			        TRUE(),
+			        ISBLANK(Delta), BLANK(),
+			        Delta > 0, "↑",  // Or UNICHAR(9650) for ▲
+			        Delta < 0, "↓",  // Or UNICHAR(9660) for ▼
+			        "→"  // Or UNICHAR(9679) for ●
+			    )
+		isHidden
+		lineageTag: fc4a7f9a-d884-4dc3-81cb-edcd8b6296cf
+
+		changedProperty = IsHidden
+
+	measure SpendperStudent_Base =
+			
+			VAR FirstYear =
+			    CALCULATE(
+			        MIN('public DEA_python'[year]),
+			        ALLEXCEPT('public DEA_python', 'public DEA_python'[city_id])
+			    )
+			RETURN
+			CALCULATE(
+			    AVERAGE('public DEA_python'[spending_per_student]),
+			    'public DEA_python'[year] = FirstYear
+			)
+		isHidden
+		lineageTag: cc551b13-6424-48f3-ab22-ce9bfee39960
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure SpendperStudent_Current =
+			
+			VAR LastYear =
+			    CALCULATE(
+			        MAX('public DEA_python'[year]),
+			        ALLEXCEPT('public DEA_python', 'public DEA_python'[city_id])
+			    )
+			RETURN
+			CALCULATE(
+			    AVERAGE('public DEA_python'[spending_per_student]),
+			    'public DEA_python'[year] = LastYear
+			)
+		isHidden
+		lineageTag: 272592f1-3a23-433a-a485-6aac977c47dd
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure SpendperStudent_Delta =
+			
+			VAR Base = [SpendperStudent_Base]
+			VAR Latest = [SpendperStudent_Current]
+			RETURN
+			IF(
+			    NOT ISBLANK(Base) && NOT ISBLANK(Latest),
+			    Latest - Base
+			)
+		isHidden
+		lineageTag: f908591e-e8a1-4e51-a024-cc37d9567200
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Format for Spend per Student variance visualization and analytical interpretation.
+	measure SpendperStudent_Label =
+			
+			VAR Arrow = [SpendperStudent_Trend]
+			VAR Delta = [SpendperStudent_Delta]
+			RETURN
+			    IF(
+			        NOT ISBLANK(Delta),
+			        Arrow & " " & FORMAT(Delta, "R$ +#0; R$ -#0; R$ 0",
+			        BLANK()
+			    ))
+		lineageTag: 5dce42b5-65f3-4f60-9a38-4f31d59170b7
+
+	measure SpendperStudent_Trend =
+			
+			VAR Delta = [SpendperStudent_Delta]
+			RETURN
+			    SWITCH(
+			        TRUE(),
+			        ISBLANK(Delta), BLANK(),
+			        Delta > 0, "↑",  // Or UNICHAR(9650) for ▲
+			        Delta < 0, "↓",  // Or UNICHAR(9660) for ▼
+			        "→"  // Or UNICHAR(9679) for ●
+			    )
+		isHidden
+		lineageTag: 79d9e8a5-fbe2-4edf-9407-6ffde0f12662
+
+		changedProperty = IsHidden
+
+	measure SpendperStudent_Delta_Numeric = [SpendperStudent_Delta]
+		isHidden
+		lineageTag: 3bac3743-fa1f-40af-bb33-109e70e5f371
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure EducPctGDP_Base =
+			
+			VAR FirstYear =
+			    CALCULATE(
+			        MIN('public DEA_python'[year]),
+			        ALLEXCEPT('public DEA_python', 'public DEA_python'[city_id])
+			    )
+			RETURN
+			CALCULATE(
+			    AVERAGE('public DEA_python'[educ_pct_gdp]),
+			    'public DEA_python'[year] = FirstYear
+			)
+		isHidden
+		lineageTag: c810057b-80f9-4e3c-a0ad-b08ab6c3fb14
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure EducPctGDP_Current =
+			
+			VAR LastYear =
+			    CALCULATE(
+			        MAX('public DEA_python'[year]),
+			        ALLEXCEPT('public DEA_python', 'public DEA_python'[city_id])
+			    )
+			RETURN
+			CALCULATE(
+			    AVERAGE('public DEA_python'[educ_pct_gdp]),
+			    'public DEA_python'[year] = LastYear
+			)
+		isHidden
+		lineageTag: 2a749ad6-cc47-4fe4-9c2e-a4d8a205c292
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure EducPctGDP_Delta =
+			
+			VAR Base = [EducPctGDP_Base]
+			VAR Latest = [EducPctGDP_Current]
+			RETURN
+			IF(
+			    NOT ISBLANK(Base) && NOT ISBLANK(Latest),
+			    (Latest - Base)*100
+			)
+		isHidden
+		lineageTag: d62b339d-03de-4564-8189-a57f353c9b32
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Format for Percentage of GDP spent in Education variance visualization and analytical interpretation.
+	measure EducPctGDP_Label =
+			
+			VAR Arrow = [EducPctGDP_Trend]
+			VAR Delta = [EducPctGDP_Delta]
+			RETURN
+			    IF(
+			        NOT ISBLANK(Delta),
+			        Arrow & " " & FORMAT(Delta, "+#0.#0 p.p.; -#0.#0 p.p.; 0.0 p.p.",
+			        BLANK()
+			    ))
+		lineageTag: ac9976e8-3755-4d50-a5f9-92cab2da1391
+
+	measure EducPctGDP_Trend =
+			
+			VAR Delta = [EducPctGDP_Delta]
+			RETURN
+			    SWITCH(
+			        TRUE(),
+			        ISBLANK(Delta), BLANK(),
+			        Delta > 0, "↑",  // Or UNICHAR(9650) for ▲
+			        Delta < 0, "↓",  // Or UNICHAR(9660) for ▼
+			        "→"  // Or UNICHAR(9679) for ●
+			    )
+		isHidden
+		lineageTag: 172fef7e-008a-4b2f-84f7-5945ff12e206
+
+		changedProperty = IsHidden
+
+	measure EducPctGDP_Delta_Numeric = [EducPctGDP_Delta]
+		isHidden
+		lineageTag: 7dd516c0-603b-43f7-8804-0ae7992bfacc
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Format for VRS Input score visualization and analytical interpretation.
+	measure VRS_INPUT = ```
+			COALESCE(SUM('public DEA_python'[DEA_vrs_input]), 0)
+			
+			```
+		lineageTag: 0d5aef42-c610-4fdf-baec-8cc665cd6c67
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// Format for Scale Efficiency score visualization and analytical interpretation.
+	measure SCALE_EFFICIENCY = COALESCE(SUM('public DEA_python'[DEA_scale_efficiency]), 0)
+		lineageTag: 8af33a0d-89c3-45e6-8033-c27b64036f44
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure NacRank_Delta_Numeric = [NacRank_Delta]
+		isHidden
+		lineageTag: a3a60b82-cfd3-43b2-81dc-f7130c49511b
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure StateRank_Delta_Numeric = [StateRank_Delta]
+		isHidden
+		lineageTag: 9eddb14b-c3f0-493c-a47d-82e11ce0a542
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure Title_DEA =
+			
+			SWITCH(
+			    LEFT(USERCULTURE(), 2),
+			    "en", "DEA VRS Input",
+			    "pt", "AED RVE Insumo",
+			    "DEA VRS Input"
+			)
+		isHidden
+		lineageTag: 6e16e5e0-9432-42f8-a7e4-838644c7fad7
+
+		changedProperty = IsHidden
+
+	measure Title_National_Rank = ```
+			
+			SWITCH(
+			    LEFT(USERCULTURE(), 2),
+			    "en", "National Rank",
+			    "pt", "Ranking Nacional",
+			    "National Rank"
+			)
+			
+			```
+		isHidden
+		lineageTag: bdf4249a-4593-4901-91dc-3514d64c6854
+
+		changedProperty = IsHidden
+
+	measure Title_State_Rank = ```
+			
+			SWITCH(
+			    LEFT(USERCULTURE(), 2),
+			    "en", "State Rank",
+			    "pt", "Ranking Estadual",
+			    "State Rank"
+			)
+			
+			```
+		isHidden
+		lineageTag: 07c8b2ad-ca9d-4e43-b9f5-36c7edbc3fa9
+
+		changedProperty = IsHidden
+
+	measure Title_Scale_Efficiency = ```
+			
+			SWITCH(
+			    LEFT(USERCULTURE(), 2),
+			    "en", "Scale Efficiency",
+			    "pt", "Eficiência de Escala",
+			    "Scale Efficiency"
+			)
+			
+			```
+		isHidden
+		lineageTag: 833a2ede-2f94-4232-9e0a-11d6155a88b6
+
+		changedProperty = IsHidden
+
+	measure Title_Spending_Student = ```
+			
+			SWITCH(
+			    LEFT(USERCULTURE(), 2),
+			    "en", "Investment per Student",
+			    "pt", "Investimento por Aluno",
+			    "Investment per Student"
+			)
+			
+			```
+		isHidden
+		lineageTag: af3ea37b-42c6-4a96-9297-25e11f7d86cb
+
+		changedProperty = IsHidden
+
+	measure Title_Educ_pct_GDP = ```
+			
+			SWITCH(
+			    LEFT(USERCULTURE(), 2),
+			    "en", "% GDP in Education",
+			    "pt", "% PIB em Educação",
+			    "% GDP in Education"
+			)
+			
+			```
+		isHidden
+		lineageTag: 45c12615-090f-4747-adbe-7084742d40c6
+
+		changedProperty = IsHidden
+
+	measure Title_Slicer_State = ```
+			
+			SWITCH(
+			    LEFT(USERCULTURE(), 2),
+			    "en", "State",
+			    "pt", "Estado",
+			    "State"
+			)
+			
+			```
+		isHidden
+		lineageTag: c1c94cbf-ce4d-483d-86aa-fe13a2ed30aa
+
+		changedProperty = IsHidden
+
+	measure Title_Slicer_City =
+			
+			SWITCH(
+			    LEFT(USERCULTURE(), 2),
+			    "en", "City",
+			    "pt", "Cidade",
+			    "City"
+			)
+		isHidden
+		lineageTag: a30153ee-a35d-4713-80ac-62a33d03f62a
+
+		changedProperty = IsHidden
+
+	/// Format for Returns Nature visualization and analytical interpretation.
+	measure RETURNS_NATURE = ```
+			
+			VAR ReturnsValue = SELECTEDVALUE('public DEA_python'[DEA_returns_nature])
+			VAR UserCulture = LEFT(USERCULTURE(), 2)
+			
+			RETURN
+			SWITCH(TRUE(),
+			    ReturnsValue = "Decreasing",
+			        SWITCH(UserCulture,
+			            "en", "Decreasing",
+			            "pt", "Decrescente",
+			            "Decreasing"
+			        ),
+			    
+			    ReturnsValue = "Increasing",
+			        SWITCH(UserCulture,
+			            "en", "Increasing",
+			            "pt", "Crescente",
+			            "Increasing"
+			        ),
+			    
+			    ReturnsValue = "Constant",
+			        SWITCH(UserCulture,
+			            "en", "Constant",
+			            "pt", "Constante",
+			            "Constant"
+			        ),
+			    
+			    ""
+			)
+			```
+		lineageTag: bbe65b99-ccb3-4106-9a89-e0b4bc569996
+
+	measure Title_Returns_Nature =
+			
+			SWITCH(
+			    LEFT(USERCULTURE(), 2),
+			    "en", "Returns Nature",
+			    "pt", "Natureza dos Retornos",
+			    "Scale Efficiency"
+			)
+		isHidden
+		lineageTag: 197b59eb-a57f-4778-9bd8-94f93c6b7e3f
+
+		changedProperty = IsHidden
+
+	measure Tooltip_DEA_VRS_Input =
+			
+			SWITCH(
+			    LEFT(USERCULTURE(), 2),
+			    "pt", "Eficiência Técnica
+			Mede quão eficientemente uma unidade utiliza seus recursos em comparação com as melhores do mesmo grupo.
+			& UNICHAR ( 10 ) &
+			DEA compara cada unidade com uma “fronteira de melhores práticas”, formada pelas unidades mais eficientes.
+			VRS permite comparar unidades de tamanhos diferentes de forma justa.
+			Orientação a insumos indica quanto os recursos poderiam ser reduzidos mantendo o mesmo nível de produção.
+			
+			Interpretação do índice:
+			1 → Totalmente eficiente tecnicamente
+			< 1 → Ineficiente (há possibilidade de reduzir insumos sem reduzir resultados)",
+			    "Technical Efficiency
+			Measures how efficiently a unit uses its resources compared to the best performers in the same group.
+			
+			DEA compares each unit to a “best practice frontier” built from the most efficient peers.
+			VRS means units are compared regardless of their size, so small and large units are evaluated fairly.
+			Input-oriented means the score shows how much inputs could be reduced while keeping the same output level.
+			
+			Score interpretation:
+			1 → Fully technically efficient
+			< 1 → Inefficient (inputs could be reduced without lowering outputs)"
+			)
+		isHidden
+		lineageTag: d40c69ee-db51-4ce4-b72e-d26c2eddad24
+
+		changedProperty = IsHidden
+
+	measure Tooltip_Scale_Efficiency =
+			
+			SWITCH(
+			    LEFT(USERCULTURE(), 2),
+			    "pt", "
+			A Eficiência de Escala indica se a unidade está operando em seu tamanho mais produtivo.
+			Essa métrica separa a eficiência gerencial dos efeitos de tamanho.
+			
+			Interpretação do índice:
+			1 → Operando na escala ótima
+			< 1 → Existe ineficiência de escala (a unidade é muito pequena ou muito grande)
+			
+			Uma unidade pode ser tecnicamente eficiente e ainda assim ter baixa eficiência de escala se o seu tamanho não for o ideal.", "
+			Scale Efficiency shows whether a unit is operating at its most productive size.
+			This separates managerial efficiency from size effects.
+			
+			Score interpretation:
+			1 → Operating at optimal scale
+			< 1 → Scale inefficiency exists (unit is either too small or too large)
+			
+			A unit can be technically efficient but still have low scale efficiency if its size is not ideal."
+			)
+		isHidden
+		lineageTag: c9501b6d-4918-4eb6-a2b4-bc622319d9dc
+
+		changedProperty = IsHidden
+
+	measure Tooltip_Returns_Nature =
+			
+			SWITCH(
+			    LEFT(USERCULTURE(), 2),
+			    "pt", "
+			Essa classificação indica como a produção mudaria se a unidade aumentasse seus insumos de forma proporcional.
+			Ela mostra se a unidade está operando abaixo, no ponto ideal ou acima da escala ótima.
+			
+			Tipos:
+			Retornos Crescentes de Escala
+			A produção aumentaria mais que proporcionalmente.
+			A unidade é pequena demais e pode se beneficiar ao crescer.
+			
+			Retornos Constantes de Escala
+			A produção aumenta proporcionalmente.
+			A unidade está na escala ótima.
+			
+			Retornos Decrescentes de Escala
+			A produção aumenta menos que proporcionalmente.
+			A unidade é grande demais e pode se beneficiar ao reduzir sua escala.
+			
+			Essa medida reflete a posição estrutural de escala, e não a evolução do desempenho ao longo do tempo.", "
+			This classification indicates how output would change if the unit increased its inputs proportionally.
+			It describes whether the unit is operating below, at, or above its optimal size.
+			
+			Types:
+			Increasing Returns to Scale (IRS)
+			Output would increase more than proportionally.
+			The unit is too small and could benefit from expanding.
+			
+			Constant Returns to Scale (CRS)
+			Output would increase proportionally.
+			The unit is operating at optimal scale.
+			
+			Decreasing Returns to Scale (DRS)
+			Output would increase less than proportionally.
+			The unit is too large and may benefit from downsizing.
+			
+			This measure reflects structural scale position, not performance trend."
+			)
+		isHidden
+		lineageTag: 580112bb-e2cb-46ce-acdf-56b8661c91a7
+
+		changedProperty = IsHidden
+
+	measure Deneb_Language = ```
+			
+			VAR Culture = USERCULTURE()
+			RETURN
+			SWITCH(
+			    TRUE(),
+			    LEFT(Culture,2) = "pt", "PT",
+			    "EN"
+			)
+			
+			```
+		isHidden
+		lineageTag: dd527316-22b6-4b01-bbbc-d722ad85a054
+
+		changedProperty = IsHidden
+
+	measure Deneb_State_Avg = ```
+			
+			VAR Lang = [Deneb_Language]
+			VAR Val = FORMAT([Deneb_state_measure], "0.000")
+			RETURN
+			SWITCH(
+			    Lang,
+			    "PT", "Média do Estado: " & Val,
+			    "State Average: " & Val
+			)
+			
+			```
+		isHidden
+		lineageTag: 564bda90-a932-4bcd-a644-70338389874b
+
+		changedProperty = IsHidden
+
+	measure Deneb_state_measure = ```
+			
+			CALCULATE(
+			    AVERAGE('public DEA_python'[state_avg_vrs])
+			)
+			
+			```
+		isHidden
+		lineageTag: d54d750a-1037-4c5e-89ec-b41f2a056a50
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure Deneb_national_measure =
+			
+			CALCULATE(
+			    AVERAGE('public DEA_python'[national_median_vrs]))
+		isHidden
+		lineageTag: 981b4bb2-f3f5-4a5a-aa6f-6cc9b3c40009
+
+		changedProperty = IsHidden
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	measure Deneb_National_Median = ```
+			
+			VAR Lang = [Deneb_Language]
+			VAR Val = FORMAT([Deneb_national_measure], "0.000")
+			RETURN
+			SWITCH(
+			    Lang,
+			    "PT", "Mediana Nacional: " & Val,
+			    "National Median: " & Val
+			)
+			
+			```
+		isHidden
+		lineageTag: 100149b4-f944-483a-9cda-766b539c6191
+
+		changedProperty = IsHidden
+
+	measure Deneb_Title = ```
+			
+			VAR Lang = [Deneb_Language]
+			VAR Yr =
+			    FORMAT(SELECTEDVALUE('public DEA_python'[year]), "yyyy")
+			RETURN
+			SWITCH(
+			    Lang,
+			    "PT", "Eficiência Técnica – " & Yr,
+			    "Technical Efficiency – " & Yr
+			)
+			
+			```
+		isHidden
+		lineageTag: 77decdd0-4b99-4c61-800f-a087d1e5d775
+
+		changedProperty = IsHidden
+
+	/// Unique municipality (DMU) identifier (surrogate key)
+	column city_id
+		dataType: string
+		lineageTag: f9822550-6287-4370-be16-c6a878e67c0d
+		dataCategory: City
+		summarizeBy: none
+		sourceColumn: city_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// 
+	/// Reference year for variables.
+	column year
+		dataType: dateTime
+		formatString: yyyy
+		lineageTag: 1f1ad0b0-0376-446c-82af-b0d9635f5ac1
+		summarizeBy: none
+		sourceColumn: year
+
+		variation Variation
+			isDefault
+			relationship: 0f256bfd-2311-402a-ae7a-e9afa58fdca6
+			defaultHierarchy: LocalDateTable_9d2fea09-5c2f-4d2c-b60b-4d37abfdf80a.'Date Hierarchy'
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation UnderlyingDateTimeDataType = Date
+
+		annotation PBI_FormatHint = {"isDateTimeCustom":true}
+
+	/// 
+	/// Official Brazilian municipality name corresponding to the DMU.
+	column city_name
+		dataType: string
+		lineageTag: f75be4bb-5363-4e26-98b5-06e27a7f1f10
+		dataCategory: City
+		summarizeBy: none
+		sourceColumn: city_name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// 
+	/// Identifier of the federative state (UF) to which the municipality belongs.
+	column state_id
+		dataType: string
+		lineageTag: a92ef907-43f4-438c-a3ae-3c89397e5845
+		dataCategory: StateOrProvince
+		summarizeBy: none
+		sourceColumn: state_id
+
+		annotation SummarizationSetBy = Automatic
+
+	/// 
+	/// Name of the municipality's state.
+	column state_name
+		dataType: string
+		lineageTag: 264a2ccf-18ae-4145-b7c0-be02602e462c
+		dataCategory: StateOrProvince
+		summarizeBy: none
+		sourceColumn: state_name
+
+		annotation SummarizationSetBy = Automatic
+
+	/// 
+	/// Annual public education expenditure per enrolled student in the municipality.
+	column spending_per_student
+		dataType: double
+		lineageTag: 9acfecae-84e6-4d82-88b5-f999ed7261ba
+		summarizeBy: none
+		sourceColumn: spending_per_student
+
+		annotation SummarizationSetBy = User
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// 
+	/// Estimated percentage of municipal GDP allocated to public education.
+	column educ_pct_gdp
+		dataType: double
+		lineageTag: d776c761-dedd-4642-895a-dafabcee59cf
+		summarizeBy: none
+		sourceColumn: educ_pct_gdp
+
+		annotation SummarizationSetBy = User
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// 
+	/// Technical efficiency score computed using an input-oriented DEA model under Variable Returns to Scale (VRS).
+	column DEA_vrs_input
+		dataType: double
+		formatString: 0.000
+		lineageTag: 87dddaf8-3ace-41bc-bdaf-f20b431dddc8
+		summarizeBy: none
+		sourceColumn: DEA_vrs_input
+
+		annotation SummarizationSetBy = User
+
+	/// 
+	/// Scale efficiency of the municipality.
+	column DEA_scale_efficiency
+		dataType: double
+		lineageTag: b3025406-f765-41b6-889c-2c1119091374
+		summarizeBy: none
+		sourceColumn: DEA_scale_efficiency
+
+		annotation SummarizationSetBy = User
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	/// 
+	/// Classification of the returns to scale regime estimated by the DEA model.
+	column DEA_returns_nature
+		dataType: string
+		lineageTag: 79f70370-c4c7-4cf4-aca9-be3cbd138808
+		summarizeBy: none
+		sourceColumn: DEA_returns_nature
+
+		annotation SummarizationSetBy = Automatic
+
+	column rank_vrs
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: f5f48a0b-ed13-4941-bdd2-1fd0d545bb8c
+		summarizeBy: none
+		sourceColumn: rank_vrs
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+	column state_rank_vrs
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: fd0583a6-6932-44f4-a434-dbf3514a7126
+		summarizeBy: none
+		sourceColumn: state_rank_vrs
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+	/// 
+	/// National median VRS technical efficiency score for the corresponding year.
+	column national_median_vrs
+		dataType: double
+		formatString: 0.000
+		lineageTag: 11513803-efdb-4994-91a4-e1fad200e482
+		summarizeBy: none
+		sourceColumn: national_median_vrs
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+	/// 
+	/// State average VRS technical efficiency score for the corresponding year.
+	column state_avg_vrs
+		dataType: double
+		isHidden
+		formatString: 0.000
+		lineageTag: 45d1539d-0a10-482b-8a7e-945631f5797c
+		summarizeBy: none
+		sourceColumn: state_avg_vrs
+
+		changedProperty = IsHidden
+
+		annotation SummarizationSetBy = User
+
+	partition 'public DEA_python' = m
+		mode: import
+		source =
+				let
+				    Source = PostgreSQL.Database("ep-frosty-dew-adi36nq5-pooler.c-2.us-east-1.aws.neon.tech", "neondb"),
+				    public_DEA_python = Source{[Schema="public",Item="DEA_python"]}[Data],
+				    #"Removed Other Columns" = Table.SelectColumns(public_DEA_python,{"year", "state_id", "state_name", "city_id", "city_name", "DEA_vrs_input", "DEA_scale_efficiency", "DEA_returns_nature", "spending_per_student", "educ_pct_gdp", "rank_vrs", "state_rank_vrs", "national_median_vrs", "state_avg_vrs"}),
+				    #"Added Prefix" = Table.TransformColumns(#"Removed Other Columns", {{"year", each "31/12/" & Text.From(_, "pt-BR"), type text}}),
+				    #"Changed Type" = Table.TransformColumnTypes(#"Added Prefix",{{"year", type date}})
+				in
+				    #"Changed Type"
+
+	annotation PBI_NavigationStepName = Navigation
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,301 @@
+# Data assets and lineage configuration
+version: "1.0"
+project: "DEApython"
+last_updated: "2026-02"
+api_version: "v1"
+
+assets:
+  # Bronze Layer
+  - name: "population"
+    layer: "bronze"
+    source: "basedosdados.br_ibge_populacao.municipio"
+    columns:
+      - name: "id_municipio"
+        type: "STRING"
+        description: "IBGE Municipality ID"
+      - name: "ano"
+        type: "INT"
+        description: "Year of data"
+      - name: "populacao"
+        type: "INT"
+        description: "Population of the municipality by year"
+
+  - name: "gdp"
+    layer: "bronze"
+    source: "basedosdados.br_ibge_pib.municipio"
+    columns:
+      - name: "id_municipio"
+        type: "STRING"
+        description: "IBGE Municipality ID"
+      - name: "ano"
+        type: "INT"
+        description: "Year of data"
+      - name: "pib"
+        type: "INT"
+        description: "Gross Domestic Product (PIB) in thousand reais"
+
+  - name: "education_spending"
+    layer: "bronze"
+    source: "basedosdados.br_me_siconfi.municipio_despesas_funcao"
+    columns:
+      - name: "id_municipio"
+        type: "STRING"
+        description: "IBGE Municipality ID"
+      - name: "ano"
+        type: "INT"
+        description: "Year of data"
+      - name: "valor"
+        type: "FLOAT"
+        description: "Education spending by year"
+
+  - name: "enrollments"
+    layer: "bronze"
+    source: "basedosdados.br_inep_sinopse_estatistica_educacao_basica.etapa_ensino_serie"
+    columns:
+      - name: "id_municipio"
+        type: "STRING"
+        description: "IBGE Municipality ID"
+      - name: "ano"
+        type: "INT"
+        description: "Year of data"
+      - name: "quantidade_matricula"
+        type: "INT"
+        description: "Number of students enrolled by year"
+
+  - name: "ideb"
+    layer: "bronze"
+    source: "basedosdados.br_inep_ideb.municipio"
+    columns:
+      - name: "id_municipio"
+        type: "STRING"
+        description: "IBGE Municipality ID"
+      - name: "ano"
+        type: "INT"
+        description: "Year of data"
+      - name: "anos_escolares"
+        type: "STRING"
+        description: "Initial or final years of elementary school"
+      - name: "ideb"
+        type: "FLOAT"
+        description: "IDEB score for the municipality by year"
+
+  - name: "dropout_rates"
+    layer: "bronze"
+    source: "basedosdados.br_inep_indicadores_educacionais.municipio"
+    columns:
+      - name: "id_municipio"
+        type: "STRING"
+        description: "IBGE Municipality ID"
+      - name: "ano"
+        type: "INT"
+        description: "Year of data"
+      - name: "taxa_abandono_ef_anos_iniciais"
+        type: "FLOAT"
+        description: "Dropout rate for initial years of elementary school by year"
+      - name: "taxa_abandono_ef_anos_finais"
+        type: "FLOAT"
+        description: "Dropout rate for final years of elementary school by year"
+
+  # Silver Layer - Aggregated and cleaned
+  - name: "silver_data"
+    layer: "silver"
+    description: "Aggregated educational inputs with completeness flags"
+    columns:
+      - name: "city_id"
+        type: "STRING"
+
+      - name: "year"
+        type: "INT"
+
+      - name: "population"
+        type: "INT"
+
+      - name: "city_name"
+        type: "STRING"
+
+      - name: "state_id"
+        type: "STRING"
+        description: "IBGE State ID"
+
+      - name: "state_name"
+        type: "STRING"
+        description: "IBGE State Name"
+
+      - name: "gdp"
+        type: "INT"
+
+      - name: "education_spending"
+        type: "INT"
+
+      - name: "enrollments"
+        type: "INT"
+
+      - name: "ideb_initial_years"
+        type: "FLOAT"
+
+      - name: "ideb_final_years"
+        type: "FLOAT"
+
+      - name: "dropout_rates_initial_years"
+        type: "FLOAT"
+
+      - name: "dropout_rates_final_years"
+        type: "FLOAT"
+
+      - name: "gdp_per_capita"
+        type: "FLOAT"
+        description: "GDP / population"
+
+      - name: "spending_per_student"
+        type: "FLOAT"
+        description: "Education spending / number of enrollments"
+
+      - name: "educ_pct_gdp"
+        type: "FLOAT"
+        description: "Education spending / GDP"
+
+      - name: "is_complete_grouped"
+        type: "BOOLEAN"
+        description: "Flag indicating data completeness"
+    tags: ["aggregated", "quality-checked"]
+
+  # Gold Layer - DEA Results
+  - name: "gold_data"
+    layer: "gold"
+    description: "DEA efficiency scores and analysis for Brazilian municipalities"
+    columns:
+      - name: "city_id"
+        type: "STRING"
+
+      - name: "year"
+        type: "INT"
+
+      - name: "population"
+        type: "INT"
+
+      - name: "city_name"
+        type: "STRING"
+
+      - name: "state_id"
+        type: "STRING"
+
+      - name: "state_name"
+        type: "STRING"
+
+      - name: "gdp"
+        type: "INT"
+
+      - name: "education_spending"
+        type: "INT"
+
+      - name: "enrollments"
+        type: "INT"
+
+      - name: "ideb_initial_years"
+        type: "FLOAT"
+
+      - name: "ideb_final_years"
+        type: "FLOAT"
+
+      - name: "dropout_rates_initial_years"
+        type: "FLOAT"
+
+      - name: "dropout_rates_final_years"
+        type: "FLOAT"
+
+      - name: "gdp_per_capita"
+        type: "FLOAT"
+
+      - name: "spending_per_student"
+        type: "FLOAT"
+
+      - name: "educ_pct_gdp"
+        type: "FLOAT"
+
+      - name: "is_complete_grouped"
+        type: "BOOLEAN"
+
+      - name: "DEA_crs_input"
+        type: "FLOAT"
+        description: "DEA efficiency score under CRS and input assumption"
+
+      - name: "DEA_vrs_input"
+        type: "FLOAT"
+        description: "DEA efficiency score under VRS and input assumption"
+
+      - name: "DEA_irs_input"
+        type: "FLOAT"
+        description: "DEA efficiency score under IRS and input assumption"
+
+      - name: "DEA_drs_input"
+        type: "FLOAT"
+        description: "DEA efficiency score under DRS and input assumption"
+
+      - name: "DEA_scale_efficiency"
+        type: "FLOAT"
+        description: "DEA scale efficiency score (IRS/DRS)"
+
+      - name: "DEA_returns_nature"
+        type: "STRING"
+        description: "DEA returns nature"
+
+      - name: "national_median_vrs"
+        type: "FLOAT"
+        description: "National median DEA VRS Input score by year"
+
+      - name: "state_avg_vrs"
+        type: "FLOAT"
+        description: "State average DEA VRS Input score by year"
+
+      - name: "rank_vrs"
+        type: "INT"
+        description: "Yearly National Rank of the municipality based on DEA VRS Input score and scale efficiency as tie-breaker"
+
+      - name: "state_rank_vrs"
+        type: "INT"
+        description: "Yearly State Rank of the municipality based on DEA VRS Input score and scale efficiency as tie-breaker"
+
+    # tags: ["dea", "efficiency", "analysis"]
+
+# Lineage definitions
+lineage:
+  - from: "population"
+    to: "silver_data"
+    pipeline: "bronze_to_silver_aggregation"
+    description: "Data aggregation and completeness flagging"
+    transformation: "left_join on city_id and year"
+  
+  - from: "gdp"
+    to: "silver_data"
+    pipeline: "bronze_to_silver_aggregation"
+    description: "Data aggregation and completeness flagging"
+    transformation: "left_join on city_id and year"
+    
+  - from: "education_spending"
+    to: "silver_data"
+    pipeline: "bronze_to_silver_aggregation"
+    description: "Data aggregation and completeness flagging"
+    transformation: "left_join on city_id and year"
+    
+  - from: "enrollments"
+    to: "silver_data"
+    pipeline: "bronze_to_silver_aggregation"
+    description: "Data aggregation and completeness flagging"
+    transformation: "left_join on city_id and year"
+    
+  - from: "ideb"
+    to: "silver_data"
+    pipeline: "bronze_to_silver_aggregation"
+    description: "Data aggregation and completeness flagging"
+    transformation: "left_join on city_id and year"
+    
+  - from: "dropout_rates"
+    to: "silver_data"
+    pipeline: "bronze_to_silver_aggregation"
+    description: "Data aggregation and completeness flagging"
+    transformation: "left_join on city_id and year"
+    
+  - from: "silver_data"
+    to: "gold_data"
+    pipeline: "silver_to_gold_transformation"
+    description: "DEA model applied to aggregated educational inputs"

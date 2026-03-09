@@ -1,0 +1,5 @@
+relationship 0f256bfd-2311-402a-ae7a-e9afa58fdca6
+	joinOnDateBehavior: datePartOnly
+	fromColumn: 'public DEA_python'.year
+	toColumn: LocalDateTable_9d2fea09-5c2f-4d2c-b60b-4d37abfdf80a.Date
+
