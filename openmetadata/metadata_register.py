@@ -227,6 +227,34 @@ class MetadataBootstrap:
             schema = self.client.create_or_update(request)
 
             self.entities[key] = schema
+    
+    # --------------------------------------------------
+    # CREATE BIGQUERY SOURCE TABLES (6 tables)
+    # --------------------------------------------------
+
+    def create_source_tables(self):
+
+        tables = self.registry.get("tables") or {}
+        services = self.registry.get("services") or {}
+        db_services = services.get("database") or {}
+
+        for key, t in tables.items():
+
+            service_name = db_services[t["service"]]["name"]
+            schema_fqn = f"{service_name}.{t['database']}.{t['schema']}"
+
+            logger.info(f"Creating source table: {t['name']}")
+
+            request = CreateTableRequest(
+                name=t["name"],
+                databaseSchema=schema_fqn,
+                description=t.get("description"),
+                columns=[]
+            )
+
+            table = self.client.create_or_update(request)
+
+            self.entities[key] = table
 
     # --------------------------------------------------
     # CONTAINERS
@@ -406,6 +434,7 @@ class MetadataBootstrap:
         self.create_containers()
         self.create_databases()
         self.create_schemas()
+        self.create_source_tables()
         self.create_tables()
         self.create_dashboard()
         self.resolve_external_entities()
