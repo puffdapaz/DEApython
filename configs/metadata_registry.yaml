@@ -1,0 +1,164 @@
+# OpenMetadata Connection Configuration
+version: "1.0"
+project: DEApython
+host: http://localhost:8585
+
+services:
+  database:
+    bigquery_source:
+      name: bigquery_source
+      type: BigQuery
+      description: Brazilian public datasets
+
+    postgres_warehouse:
+      name: postgres_warehouse
+      type: Postgres
+      description: Analytics warehouse
+
+  storage:
+    gcs_bronze:
+      name: gcs_bronze
+      type: GCS
+      description: Bronze raw ingestion layer
+      connection:
+        config:
+          type: GCS
+          credentials:
+            gcpConfig:
+              type: service_account
+
+    gcs_silver:
+      name: gcs_silver
+      type: GCS
+      description: Silver cleaned datasets
+      connection:
+        config:
+          type: GCS
+          credentials:
+            gcpConfig:
+              type: service_account
+
+    gcs_gold:
+      name: gcs_gold
+      type: GCS
+      description: Gold curated datasets
+      connection:
+        config:
+          type: GCS
+          credentials:
+            gcpConfig:
+              type: service_account
+
+  dashboard:
+    powerbi_analytics:
+      name: powerbi_analytics
+      type: PowerBI
+      description: Analytics dashboard
+
+# ------------------------------------------------------------
+# DATA ASSETS
+# ------------------------------------------------------------
+
+# BigQuery Source Tables (6)
+tables:
+  population:
+    service: bigquery_source
+    database: basedosdados
+    schema: public
+    name: population
+    description: Population data from IBGE
+
+  gdp:
+    service: bigquery_source
+    database: basedosdados
+    schema: public
+    name: gdp
+    description: GDP data from IBGE
+
+  education_spending:
+    service: bigquery_source
+    database: basedosdados
+    schema: public
+    name: education_spending
+    description: Education spending data from SICONFI
+
+  enrollments:
+    service: bigquery_source
+    database: basedosdados
+    schema: public
+    name: enrollments
+    description: School enrollment data from INEP
+
+  ideb:
+    service: bigquery_source
+    database: basedosdados
+    schema: public
+    name: ideb
+    description: IDEB educational quality index
+
+  dropout_rates:
+    service: bigquery_source
+    database: basedosdados
+    schema: public
+    name: dropout_rates
+    description: School dropout rates from INEP
+
+# GCS Containers (your medallion layers)
+containers:
+  bronze_layer:
+    service: gcs_bronze
+    description: Raw data at gs://deapython/bronze/
+
+  silver_layer:
+    service: gcs_silver
+    description: Aggregated data at gs://deapython/silver/
+
+  gold_layer:
+    service: gcs_gold
+    description: DEA results at gs://deapython/gold/
+
+# Pipeline (optional)
+pipelines:
+  python_etl_pipeline:
+    service: airflow_metadata
+    description: DEApython ETL pipeline
+
+# Dashboard
+dashboards:
+  powerbi_dashboard:
+    service: powerbi_analytics
+    description: DEA analytics dashboard
+
+# ------------------------------------------------------------
+# LINEAGE - THE SINGLE FLOW
+# ------------------------------------------------------------
+lineage:
+  # Source tables → Bronze container
+  - from: population
+    to: bronze_layer
+  - from: gdp
+    to: bronze_layer
+  - from: education_spending
+    to: bronze_layer
+  - from: enrollments
+    to: bronze_layer
+  - from: ideb
+    to: bronze_layer
+  - from: dropout_rates
+    to: bronze_layer
+
+  # Bronze → Silver
+  - from: bronze_layer
+    to: silver_layer
+
+  # Silver → Gold
+  - from: silver_layer
+    to: gold_layer
+
+  # Gold container → Gold table (created in code)
+  - from: gold_layer
+    to: gold_dataset
+
+  # Gold table → Dashboard
+  - from: gold_dataset
+    to: powerbi_dashboard

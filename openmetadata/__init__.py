@@ -1,4 +1,4 @@
-from openmetadata.metadata_register import register_project
+from openmetadata.metadata_register import main
 
-__all__ = ["register_project"
+__all__ = ["main"
 ]
