@@ -263,19 +263,19 @@ def run_diagnostics(gold_df: pd.DataFrame,
             # Statistical tests
             year_tests["shapiro_scale_eff"] = shapiro_wilk_test(
                 year_gold_df["DEA_scale_efficiency"].to_numpy(),
-                alpha=alpha)
+                alpha = alpha)
             year_tests["scale_eff"] = scale_efficiency_test(
                 year_gold_df["DEA_scale_efficiency"].to_numpy(),
-                alpha=alpha)
+                alpha = alpha)
             year_tests["returns_to_scale"] = {
                 "crs_vs_vrs": kolmogorov_smirnov_test(
                     year_gold_df["DEA_crs_input"].to_numpy(),
                     year_gold_df["DEA_vrs_input"].to_numpy(),
-                    alpha=alpha),
+                    alpha = alpha),
                 "irs_vs_drs": kolmogorov_smirnov_test(
                     year_gold_df["DEA_irs_input"].to_numpy(),
                     year_gold_df["DEA_drs_input"].to_numpy(),
-                    alpha=alpha),
+                    alpha = alpha),
             }
             diagnostics_tests[year] = year_tests
 
@@ -283,41 +283,42 @@ def run_diagnostics(gold_df: pd.DataFrame,
             desc = year_gold_df.describe().reset_index()
             desc['year'] = year 
             diagnostics_summary.append(desc)
-            corr = year_gold_df.corr(numeric_only=True).reset_index()
+            corr = year_gold_df.corr(numeric_only = True).reset_index()
             corr['year'] = year
             diagnostics_summary.append(corr)
             if log:
                 log_test_results(f"Year {year}", year_tests)
-        diagnostics_summary_df = pd.concat(diagnostics_summary, ignore_index=True)
+        diagnostics_summary_df = pd.concat(diagnostics_summary, 
+                                           ignore_index = True)
 
         # Save outputs
         paths = load_configs()
         bucket_name = setup_gcp_bd()
         local_path = Path(paths["paths"]["gold"])
         layer = paths["layers"]["gold"]
-        local_path.mkdir(parents=True,
-                         exist_ok=True)
+        local_path.mkdir(parents = True,
+                         exist_ok = True)
 
         # Statistical tests → JSON
         save_data(diagnostics_tests,
                   "diagnostics_tests",
-                  directory=local_path,
-                  file_format="json")
+                  directory = local_path,
+                  file_format = "json")
         save_data_to_gcs(diagnostics_tests,
                          "diagnostics_tests",
                          bucket_name,
-                         layer=layer,
-                         file_format="json")
+                         layer = layer,
+                         file_format = "json")
         # Describe + correlation → Parquet
         save_data(diagnostics_summary_df,
                   "diagnostics_summary",
-                  directory=local_path,
-                  file_format="parquet")
+                  directory = local_path,
+                  file_format = "parquet")
         save_data_to_gcs(diagnostics_summary_df,
                          "diagnostics_summary",
                          bucket_name,
-                         layer=layer,
-                         file_format="parquet")
+                         layer = layer,
+                         file_format = "parquet")
         return diagnostics_tests, diagnostics_summary_df
     except Exception as e:
         logger.error(f"Error diagnosing data: {e}")

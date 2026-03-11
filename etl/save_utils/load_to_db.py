@@ -47,24 +47,26 @@ NEON_DATABASE = os.getenv("NEON_DATABASE", "postgres")
 # SQLAlchemy DSN (DDL, metadata)
 SQLALCHEMY_DSN = (f"postgresql://{NEON_USER}:{NEON_PASSWORD}"
                   f"@{NEON_HOST}:{NEON_PORT}/{NEON_DATABASE}"
-)
+                )
 
 # psycopg DSN (COPY)
-PSYCOPG_DSN = (f"host={NEON_HOST} "
-               f"port={NEON_PORT} "
-               f"dbname={NEON_DATABASE} "
-               f"user={NEON_USER} "
-               f"password={NEON_PASSWORD} "
-               f"sslmode=require"
-)
+PSYCOPG_DSN = (f"host = {NEON_HOST} "
+               f"port = {NEON_PORT} "
+               f"dbname = {NEON_DATABASE} "
+               f"user = {NEON_USER} "
+               f"password = {NEON_PASSWORD} "
+               f"sslmode = require"
+            )
 
 # ---------------------------------------------------------------------
 # Database helpers
 # ---------------------------------------------------------------------
 def create_engine_sa():
-    """Create SQLAlchemy engine (DDL / metadata only)."""
+    """
+    Create SQLAlchemy engine (DDL / metadata only)
+    """
     return create_engine(SQLALCHEMY_DSN,
-                         connect_args={"sslmode": "require"}
+                         connect_args = {"sslmode": "require"}
                         )
         
 def drop_objects(engine):
@@ -98,7 +100,6 @@ def drop_objects(engine):
                 conn.execute(
                     text(f'DROP TABLE IF EXISTS "{schema}"."{table}" CASCADE;')
                 )
-
     except Exception as e:
         logger.error(f"Failed to drop existing objects: {e}")
         raise
@@ -111,42 +112,47 @@ def infer_sqlalchemy_type(dtype):
     return String
 
 def create_table_from_dataframe(engine, 
-                                df: pd.DataFrame, table_name: str):
-    metadata = MetaData()
-
-    columns = [Column(col, infer_sqlalchemy_type(dtype))
-               for col, dtype in df.dtypes.items()
-              ]
-
-    table = Table(table_name, 
-                  metadata, 
-                  *columns)
-    metadata.drop_all(engine, 
-                      tables=[table])
-    metadata.create_all(engine)
+                                df: pd.DataFrame, 
+                                table_name: str):
+    try:
+        metadata = MetaData()
+        columns = [Column(col, infer_sqlalchemy_type(dtype))
+                for col, dtype in df.dtypes.items()
+                ]
+        table = Table(table_name, 
+                    metadata, 
+                    *columns)
+        metadata.drop_all(engine, 
+                        tables = [table])
+        metadata.create_all(engine)
+    except Exception as e:
+        logger.error(f"Failed to create table: {e}")
+        raise
 
 # ---------------------------------------------------------------------
 # COPY loader
 # ---------------------------------------------------------------------
 def copy_df_to_postgres(df: pd.DataFrame,
                         table_name: str,
-                        dsn: str
-                       ) -> None:
+                        dsn: str) -> None:
     """
     High-performance bulk load using Postgres COPY FROM STDIN (psycopg3).
     """
-    buffer = io.StringIO()
-    df.to_csv(buffer, 
-              index=False, 
-              header=False)
-    buffer.seek(0)
-
-    with psycopg.connect(dsn) as conn:
-        with conn.cursor() as cur:
-            with cur.copy(
-                f"COPY {table_name} FROM STDIN WITH (FORMAT CSV)"
-            ) as copy:
-                copy.write(buffer.getvalue())
+    try:
+        buffer = io.StringIO()
+        df.to_csv(buffer, 
+                  index = False, 
+                  header = False)
+        buffer.seek(0)
+        with psycopg.connect(dsn) as conn:
+            with conn.cursor() as cur:
+                with cur.copy(
+                    f"COPY {table_name} FROM STDIN WITH (FORMAT CSV)"
+                ) as copy:
+                    copy.write(buffer.getvalue())
+    except Exception as e:
+        logger.error(f"Failed to copy data to data warehouse: {e}")
+        raise
 
 # ---------------------------------------------------------------------
 # Public API
@@ -156,12 +162,14 @@ def load_to_neon(df: pd.DataFrame = None,
     try:
         if df is None:
             df = pd.read_parquet(DATA_PATH)
-
         engine = create_engine_sa()
         drop_objects(engine)
-        create_table_from_dataframe(engine, df, table_name)
-        copy_df_to_postgres(df, table_name, PSYCOPG_DSN)
-
+        create_table_from_dataframe(engine, 
+                                    df, 
+                                    table_name)
+        copy_df_to_postgres(df, 
+                            table_name, 
+                            PSYCOPG_DSN)
         return True
     except Exception as e:
         logger.error(f"Failed to load data to data warehouse: {e}")

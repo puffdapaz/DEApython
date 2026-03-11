@@ -92,7 +92,6 @@ class OMClient:
     Handles authentication and a configured client instance
     for interacting with the OpenMetadata server.
     """
-
     def __init__(self, config_path: str = "configs/metadata_registry.yaml") -> None:
         """
         Initialize OpenMetadata client with configuration from YAML file.
@@ -127,7 +126,6 @@ class Registry:
     Loads and provides access to the metadata dictionary registry YAML file containing
     definitions for services, databases, schemas, containers, tables, and lineage.
     """
-
     def __init__(self, path) -> None:
         """
         YAML configuration
@@ -159,7 +157,6 @@ class MetadataBootstrap:
     Registry instance with YAML configuration;
     Dictionary tracking all created entities by their keys.
     """
-
     def __init__(self, 
                  client: OpenMetadata, 
                  registry: Registry) -> None:
@@ -176,7 +173,6 @@ class MetadataBootstrap:
     # --------------------------------------------------
     # SERVICES
     # --------------------------------------------------
-
     def create_services(self) -> None:
         """
         Create services defined in the registry.

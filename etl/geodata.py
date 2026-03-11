@@ -72,14 +72,14 @@ def fetch_geodata(year: int = 2017) -> Tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]
     try:
         muni_gdf = geobr.read_municipality(code_muni = "all",
                                            year = year)
-        muni_gdf = gpd.GeoDataFrame(muni_gdf).rename(columns={"code_muni": "city_id",
-                                                              "name_muni": "city_name",
-                                                              "code_state": "state_id",
-                                                              "name_state": "state_name"
+        muni_gdf = gpd.GeoDataFrame(muni_gdf).rename(columns = {"code_muni": "city_id",
+                                                                "name_muni": "city_name",
+                                                                "code_state": "state_id",
+                                                                "name_state": "state_name"
                                                              })
-        state_gdf = geobr.read_state(year=year)
-        state_gdf = gpd.GeoDataFrame(state_gdf).rename(columns={"code_state": "state_id",
-                                                                "name_state": "state_name"                                                                
+        state_gdf = geobr.read_state(year = year)
+        state_gdf = gpd.GeoDataFrame(state_gdf).rename(columns = {"code_state": "state_id",
+                                                                  "name_state": "state_name"                                                                
                                                                })
         return muni_gdf, state_gdf
     except Exception as e:
@@ -108,7 +108,7 @@ def clean_geodata(df: gpd.GeoDataFrame, cols: List[str]) -> gpd.GeoDataFrame:
             if col in df.columns:
                 df[col] = (df[col]
                            .astype(str)
-                           .str.replace(".0", "", regex=False)
+                           .str.replace(".0", "", regex = False)
                            .str.strip()
                           )
         if "state_id" in df.columns:
@@ -136,9 +136,9 @@ def prepare_geodata(muni_gdf: gpd.GeoDataFrame,
     """    
     try:
         # Convert to standard CRS first
-        muni_gdf = (muni_gdf.to_crs(epsg=4326)
+        muni_gdf = (muni_gdf.to_crs(epsg = 4326)
                             .copy())
-        state_gdf = (state_gdf.to_crs(epsg=4326)
+        state_gdf = (state_gdf.to_crs(epsg = 4326)
                               .copy())
         # Clean string columns
         muni_gdf = clean_geodata(muni_gdf, ["city_id",
@@ -164,11 +164,11 @@ def prepare_geodata(muni_gdf: gpd.GeoDataFrame,
                 "geometry"]
         combined_gdf = pd.concat([state_gdf, 
                                   muni_gdf], 
-                                 ignore_index=True
+                                  ignore_index = True
                                 )[keep]
         combined_gdf = gpd.GeoDataFrame(combined_gdf, 
-                                        geometry="geometry", 
-                                        crs=4326)
+                                        geometry = "geometry", 
+                                        crs = 4326)
         return combined_gdf
     except Exception as e:
         logger.error(f"Error preparing geodata: {e}")
@@ -192,11 +192,11 @@ def convert_geodata(muni_gdf: gpd.GeoDataFrame,
     try:
         combined_gdf = prepare_geodata(muni_gdf, 
                                        state_gdf)
-        combined_gdf["geometry"] = combined_gdf.geometry.simplify(tolerance=0.03)
+        combined_gdf["geometry"] = combined_gdf.geometry.simplify(tolerance = 0.03)
 
         # Export to TopoJSON
         topo = tp.Topology(combined_gdf, 
-                           prequantize=1e5)
+                           prequantize = 1e5)
         topo_json = (topo.to_json()
                          .replace("NaN", '""'))
         return topo_json
@@ -217,18 +217,18 @@ def save_json(topo_json: str) -> None:
         bucket_name = setup_gcp_bd()
         local_path = Path(paths["paths"]["gold"])
         layer = paths["layers"]["gold"]
-        local_path.mkdir(parents=True,
-                         exist_ok=True)
+        local_path.mkdir(parents = True,
+                         exist_ok = True)
         save_data(topo_json,
                   "geo_json",
-                  directory=local_path,
-                  file_format="json"
+                  directory = local_path,
+                  file_format = "json"
                   )
         save_data_to_gcs(topo_json,
                          "geo_json",
                          bucket_name,
-                         layer=layer,
-                         file_format="json"
+                         layer = layer,
+                         file_format = "json"
                          )
         print(f"geodata saved as JSON")
     except Exception as e:

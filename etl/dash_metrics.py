@@ -32,33 +32,35 @@ def eff_rank(df: pd.DataFrame) -> pd.DataFrame:
         valid = df[df["DEA_vrs_input"].notna()].copy()
 
         # National Rank
-        valid = valid.sort_values(
-            by=["year", "DEA_vrs_input", "DEA_scale_efficiency"],
-            ascending=[True, False, False]
-        )
-
-        valid["rank_vrs"] = (
-            valid.groupby("year")
-                 .cumcount() + 1
-        )
-
+        valid = valid.sort_values(by = ["year", 
+                                        "DEA_vrs_input", 
+                                        "DEA_scale_efficiency"],
+                                  ascending = [True, False, False]
+                                )
+        valid["rank_vrs"] = (valid.groupby("year")
+                                  .cumcount() + 1
+                        )
         # State Rank
-        valid = valid.sort_values(
-            by=["year", "state_name", "DEA_vrs_input", "DEA_scale_efficiency"],
-            ascending=[True, True, False, False]
-        )
-
-        valid["state_rank_vrs"] = (
-            valid.groupby(["year", "state_name"])
-                 .cumcount() + 1
-        )
+        valid = valid.sort_values(by = ["year", 
+                                        "state_name", 
+                                        "DEA_vrs_input", 
+                                        "DEA_scale_efficiency"],
+                                  ascending = [True, True, False, False]
+                                )
+        valid["state_rank_vrs"] = (valid.groupby(["year", 
+                                                  "state_name"])
+                                        .cumcount() + 1
+                                )
 
         # Merge ranks back to original dataframe
-        df = df.merge(
-            valid[["city_id", "year", "rank_vrs", "state_rank_vrs"]],
-            on=["city_id", "year"],
-            how="left"
-        )
+        df = df.merge(valid[["city_id", 
+                             "year", 
+                             "rank_vrs", 
+                             "state_rank_vrs"]],
+                      on = ["city_id", 
+                            "year"],
+                      how = "left"
+                    )
 
         # Rows without DEA score → rank = 0
         df["rank_vrs"] = df["rank_vrs"].fillna(0).astype(int)

@@ -146,14 +146,14 @@ def run_dea_models(X: np.ndarray,
     dea_results = {}
     try:
         # CRS
-        crs_input  = dea(X, Y, rts=RTS.crs, orientation=Orientation.input)
-        # crs_output = dea(X, Y, rts=RTS.crs, orientation=Orientation.output)
+        crs_input  = dea(X, Y, rts = RTS.crs, orientation = Orientation.input)
+        # crs_output = dea(X, Y, rts = RTS.crs, orientation = Orientation.output)
         # VRS
-        vrs_input  = dea(X, Y, rts=RTS.vrs, orientation=Orientation.input)
-        # vrs_output = dea(X, Y, rts=RTS.vrs, orientation=Orientation.output)
+        vrs_input  = dea(X, Y, rts = RTS.vrs, orientation = Orientation.input)
+        # vrs_output = dea(X, Y, rts = RTS.vrs, orientation = Orientation.output)
         # IRS / DRS
-        irs_input  = dea(X, Y, rts=RTS.irs, orientation=Orientation.input)
-        drs_input  = dea(X, Y, rts=RTS.drs, orientation=Orientation.input)
+        irs_input  = dea(X, Y, rts = RTS.irs, orientation = Orientation.input)
+        drs_input  = dea(X, Y, rts = RTS.drs, orientation = Orientation.input)
 
         # Assign efficiency
         dea_results["crs_input"] = crs_input.eff
@@ -212,9 +212,9 @@ def results_wrapper(df_full: pd.DataFrame,
         merge_cols = [c for c in dea_results.columns if c not in df_full.columns] + ["city_id", "year"]
         gold_df = df_full.merge(
             dea_results[merge_cols],
-            on=["city_id",
-                "year"],
-            how="left")
+            on = ["city_id",
+                  "year"],
+            how = "left")
         gold_df["city_id"] = gold_df["city_id"].astype(str)
         return gold_df
     except Exception as e:
@@ -240,12 +240,13 @@ def run_gold_model(df_full: pd.DataFrame) -> List[pd.DataFrame]:
             try:
                 X, Y = prepare_matrices(year_data)
                 dea_results = run_dea_models(X, Y)
-                year_results = derived_metrics(year_data, dea_results)
+                year_results = derived_metrics(year_data, 
+                                               dea_results)
                 results.append(year_results)
             except Exception as e:
                     logger.error("DEA failed for year %d: %s", year, e)
                     raise
-        results_df = pd.concat(results, ignore_index=True)
+        results_df = pd.concat(results, ignore_index = True)
         gold_df = results_wrapper(df_full, results_df)
         return gold_df
     except Exception as e:
@@ -266,8 +267,8 @@ def validate_gold(gold_df: pd.DataFrame) -> bool:
         ValueError: If validation fails for any DataFrame.
     """
     if not validate_data(gold_df,
-                         schema=gold_schema,
-                         name="Gold"):
+                         schema = gold_schema,
+                         name = "Gold"):
         raise ValueError("Gold data validation failed")  
 
 def run_diagnostics(gold_df: pd.DataFrame) -> None:
@@ -280,9 +281,9 @@ def run_diagnostics(gold_df: pd.DataFrame) -> None:
     """
     try:
         md.analyze_data(gold_df,
-                        name="Gold")
+                        name = "Gold")
         md.run_diagnostics(gold_df,
-                           log=True)
+                           log = True)
     except Exception as e:
         logger.error(f"Error during gold data diagnostics: {e}")
         raise
@@ -302,15 +303,15 @@ def save_gold(gold_df: pd.DataFrame,
     try:
         local_path = Path(paths["paths"]["gold"])
         layer = paths["layers"]["gold"]
-        local_path.mkdir(parents=True,
-                         exist_ok=True)
+        local_path.mkdir(parents = True,
+                         exist_ok = True)
         save.save_data(gold_df,
                        "gold_data",
-                       directory=local_path)
+                       directory = local_path)
         save.save_data_to_gcs(gold_df,
                               "gold_data",
                               bucket_name,
-                              layer=layer)
+                              layer = layer)
         logger.info(f"Data saved at {local_path} and GCP://{bucket_name}/{layer} successfully")
     except Exception as e:
         logger.error(f"Error saving {layer}: {e}")

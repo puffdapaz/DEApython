@@ -68,7 +68,7 @@ def load_bronze_data(layer: str = "bronze") -> Dict[str, str]:
     try:
         with open("configs/queries.yaml",
                   "r",
-                  encoding="utf-8") as f:
+                  encoding = "utf-8") as f:
             all_queries = yaml.safe_load(f)
         layer_queries = all_queries.get(f"{layer}_queries", {})
         if not layer_queries:
@@ -98,7 +98,7 @@ def run_bronze_query(queries: Dict[str, str]) -> Dict[str, pd.DataFrame]:
         for name, query in queries.items():
             try:
                 df = bd.read_sql(query,
-                                billing_project_id=os.getenv("billing_project_id"))
+                                 billing_project_id = os.getenv("billing_project_id"))
                 dataframes[name] = df
             except Exception as e:
                 logger.error(f"Error running query {name}: {e}")
@@ -121,7 +121,7 @@ def validate_bronze(dataframes: Dict[str, pd.DataFrame]) -> bool:
         ValueError: If validation fails for any DataFrame.
     """
     if not validate_data(dataframes,
-                         schema_map=schemas):
+                         schema_map = schemas):
         raise ValueError("Bronze data validation failed")
 
 def save_bronze(dataframes: Dict[str, pd.DataFrame],
@@ -139,18 +139,18 @@ def save_bronze(dataframes: Dict[str, pd.DataFrame],
     try:
         local_path = Path(paths["paths"]["bronze"])
         layer = paths["layers"]["bronze"]
-        local_path.mkdir(parents=True,
-                        exist_ok=True)
+        local_path.mkdir(parents = True,
+                         exist_ok = True)
 
         for name, df in dataframes.items():
             if df is not None:
                 save.save_data(df,
                                f"bronze_{name}",
-                               directory=local_path)
+                               directory = local_path)
                 save.save_data_to_gcs(df,
                                       f"bronze_{name}",
                                       bucket,
-                                      layer=layer)
+                                      layer = layer)
                 logger.info(f"Data saved at {local_path} and GCP://{bucket}/{layer} successfully")
     except Exception as e:
         logger.error(f"Error saving {layer}: {e}")

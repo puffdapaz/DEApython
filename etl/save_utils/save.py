@@ -66,15 +66,15 @@ def _save_to_file(obj: Union[pd.DataFrame, dict, str],
         clean_obj = _convert_keys(obj)
         with open(filepath,
                   "w",
-                  encoding="utf-8") as f:
+                  encoding = "utf-8") as f:
             json.dump(clean_obj,
                       f,
-                      indent=2,
-                      ensure_ascii=False)
+                      indent = 2,
+                      ensure_ascii = False)
     elif isinstance(obj, str):
         if file_format != "json":
             raise ValueError("string objects can only be saved as JSON")
-        with open(filepath, "w", encoding="utf-8") as f:
+        with open(filepath, "w", encoding = "utf-8") as f:
             f.write(obj)
     else:
         raise TypeError("Only DataFrame or dict are supported")
@@ -94,12 +94,12 @@ def save_data(obj: Union[pd.DataFrame, dict, str],
         str: Full path of the saved file.
     """
     os.makedirs(directory,
-                exist_ok=True)
+                exist_ok = True)
     path = os.path.join(directory,
                         f"{filename}.{file_format}")
     _save_to_file(obj,
-                 path,
-                 file_format)
+                  path,
+                  file_format)
     return path
 
 def save_data_to_gcs(obj: Union[pd.DataFrame, dict, str],

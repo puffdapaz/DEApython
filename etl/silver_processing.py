@@ -67,7 +67,7 @@ def load_silver_data() -> str:
     try:
         with open("configs/queries.yaml",
                   "r",
-                  encoding="utf-8") as f:
+                  encoding = "utf-8") as f:
             query = yaml.safe_load(f)
             return query["silver"]["query"]
     except Exception as e:
@@ -86,7 +86,7 @@ def run_silver_query(query: str) -> pd.DataFrame:
     """
     try:
         df = bd.read_sql(query,
-                         billing_project_id=os.getenv("billing_project_id"))
+                         billing_project_id = os.getenv("billing_project_id"))
         return df
     except Exception as e:
         logger.error(f"Error running query: {e}")
@@ -107,10 +107,10 @@ Returns:
     try:
         silver_df = silver_df.copy()
         # Flag municipalities that have all non-null values across all value columns and years
-        tmp_flag = silver_df[value_columns].notnull().all(axis=1)
-        silver_df['is_complete_grouped'] = (silver_df.assign(_tmp=tmp_flag)
-                                                    .groupby('city_id')['_tmp']
-                                                    .transform(lambda x: x.all()))
+        tmp_flag = silver_df[value_columns].notnull().all(axis = 1)
+        silver_df['is_complete_grouped'] = (silver_df.assign(_tmp = tmp_flag)
+                                                     .groupby('city_id')['_tmp']
+                                                     .transform(lambda x: x.all()))
         return silver_df
     except Exception as e:
         logger.error(f"Error categorizing data: {e}")
@@ -130,8 +130,8 @@ def validate_silver(silver_df: pd.DataFrame) -> bool:
         ValueError: If validation fails for any DataFrame.
     """
     if not validate_data(silver_df,
-                         schema=silver_schema,
-                         name="Silver"):
+                         schema = silver_schema,
+                         name = "Silver"):
             raise ValueError("silver data validation failed")       
 
 def save_silver(silver_df: pd.DataFrame,
@@ -149,15 +149,15 @@ def save_silver(silver_df: pd.DataFrame,
     try:
         local_path = Path(paths["paths"]["silver"])
         layer = paths["layers"]["silver"]
-        local_path.mkdir(parents=True,
-                         exist_ok=True)
+        local_path.mkdir(parents = True,
+                         exist_ok = True)
         save.save_data(silver_df,
                        "silver_data",
-                       directory=local_path)
+                       directory = local_path)
         save.save_data_to_gcs(silver_df,
                               "silver_data",
                               bucket,
-                              layer=layer)
+                              layer = layer)
         logger.info(f"Data saved at {local_path} and GCP://{bucket}/{layer} successfully")
     except Exception as e:
         logger.error(f"Error saving {layer}: {e}")
@@ -194,10 +194,10 @@ def process_silver_data() -> Optional[bd.Table]:
         silver_df = add_completeness_flags(silver_df,
                                            value_columns)
 
-        geographical_features(year=2017)
+        geographical_features(year = 2017)
         validate_silver(silver_df)
         analyze_data(silver_df,
-                     name="silver")
+                     name = "silver")
 
         save_silver(silver_df,
                     paths,
