@@ -16,32 +16,10 @@ services:
       description: Analytics warehouse
 
   storage:
-    gcs_bronze:
-      name: gcs_bronze
+    gcs_bucket:
+      name: gcs_lakehouse
       type: GCS
-      description: Bronze raw ingestion layer
-      connection:
-        config:
-          type: GCS
-          credentials:
-            gcpConfig:
-              type: service_account
-
-    gcs_silver:
-      name: gcs_silver
-      type: GCS
-      description: Silver cleaned datasets
-      connection:
-        config:
-          type: GCS
-          credentials:
-            gcpConfig:
-              type: service_account
-
-    gcs_gold:
-      name: gcs_gold
-      type: GCS
-      description: Gold curated datasets
+      description: DEA medallion lakehouse
       connection:
         config:
           type: GCS
@@ -55,11 +33,6 @@ services:
       type: PowerBI
       description: Analytics dashboard
 
-# ------------------------------------------------------------
-# DATA ASSETS
-# ------------------------------------------------------------
-
-# BigQuery Source Tables (6)
 tables:
   population:
     service: bigquery_source
@@ -103,37 +76,25 @@ tables:
     name: dropout_rates
     description: School dropout rates from INEP
 
-# GCS Containers (your medallion layers)
 containers:
   bronze_layer:
-    service: gcs_bronze
-    description: Raw data at gs://deapython/bronze/
+    service: gcs_bucket
+    description: Raw data ingestion layer at GCP://deapython/bronze/
 
   silver_layer:
-    service: gcs_silver
-    description: Aggregated data at gs://deapython/silver/
+    service: gcs_bucket
+    description: Aggregated cleaned data at GCP://deapython/silver/
 
   gold_layer:
-    service: gcs_gold
-    description: DEA results at gs://deapython/gold/
+    service: gcs_bucket
+    description: DEA results at GCP://deapython/gold/
 
-# Pipeline (optional)
-pipelines:
-  python_etl_pipeline:
-    service: airflow_metadata
-    description: DEApython ETL pipeline
-
-# Dashboard
 dashboards:
   powerbi_dashboard:
     service: powerbi_analytics
     description: DEA analytics dashboard
 
-# ------------------------------------------------------------
-# LINEAGE - THE SINGLE FLOW
-# ------------------------------------------------------------
 lineage:
-  # Source tables → Bronze container
   - from: population
     to: bronze_layer
   - from: gdp
@@ -146,19 +107,11 @@ lineage:
     to: bronze_layer
   - from: dropout_rates
     to: bronze_layer
-
-  # Bronze → Silver
   - from: bronze_layer
     to: silver_layer
-
-  # Silver → Gold
   - from: silver_layer
     to: gold_layer
-
-  # Gold container → Gold table (created in code)
   - from: gold_layer
     to: gold_dataset
-
-  # Gold table → Dashboard
   - from: gold_dataset
     to: powerbi_dashboard
