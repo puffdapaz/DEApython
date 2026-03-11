@@ -23,7 +23,6 @@ from metadata.generated.schema.security.client.openMetadataJWTClientConfig impor
 from metadata.generated.schema.entity.services.connections.metadata.openMetadataConnection import OpenMetadataConnection
 from metadata.generated.schema.entity.services.connections.metadata.openMetadataConnection import AuthProvider
 
-from metadata.generated.schema.entity.data.table import Table
 from metadata.generated.schema.entity.data.table import Column as OMColumn
 from metadata.generated.schema.entity.data.table import DataType
 from metadata.generated.schema.type.entityReference import EntityReference
@@ -34,8 +33,6 @@ from metadata.generated.schema.api.data.createContainer import CreateContainerRe
 from metadata.generated.schema.api.data.createDashboard import CreateDashboardRequest
 from metadata.generated.schema.api.lineage.addLineage import AddLineageRequest
 
-from metadata.generated.schema.api.data.createDatabase import CreateDatabaseRequest
-from metadata.generated.schema.api.data.createDatabaseSchema import CreateDatabaseSchemaRequest
 from metadata.generated.schema.api.services.createDatabaseService import CreateDatabaseServiceRequest
 from metadata.generated.schema.api.services.createStorageService import CreateStorageServiceRequest
 from metadata.generated.schema.api.services.createDashboardService import CreateDashboardServiceRequest
@@ -194,7 +191,7 @@ class MetadataBootstrap:
             for group_name, group in services.items():
                 for key, svc in group.items():
                     if group_name == "database":
-                        request = CreateDatabaseServiceRequest(name=svc["name"],
+                        request = CreateDatabaseServiceRequest(name = svc["name"],
                                                             serviceType = DatabaseServiceType[svc["type"]],
                                                             description = svc.get("description"),
                                                             )
@@ -221,7 +218,7 @@ class MetadataBootstrap:
             raise
 
     # --------------------------------------------------
-    # CREATE BIGQUERY SOURCE TABLES (6 tables)
+    # CREATE BIGQUERY SOURCE TABLES
     # --------------------------------------------------
     def create_source_tables(self) -> None:
         """
@@ -268,8 +265,8 @@ class MetadataBootstrap:
                 service_key = c["service"]
                 service_name = services[service_key]["name"]
                 request = CreateContainerRequest(name = key,
-                                                service = service_name,
-                                                description = c.get("description"),
+                                                 service = service_name,
+                                                 description = c.get("description"),
                                             )
                 container = self.client.create_or_update(request)
                 self.entities[key] = container
@@ -298,9 +295,9 @@ class MetadataBootstrap:
             schema_fqn = f"{db_fqn}.public"
             columns = pandera_to_om_columns(gold_schema)
             request = CreateTableRequest(name = "gold_dataset",
-                                        databaseSchema = schema_fqn,
-                                        columns = columns,
-                                        description = "DEA efficiency scores and analysis"
+                                         databaseSchema = schema_fqn,
+                                         columns = columns,
+                                         description = "DEA efficiency scores and analysis"
                                     )
             gold_table = self.client.create_or_update(request)
             self.entities["gold_dataset"] = gold_table
@@ -326,8 +323,8 @@ class MetadataBootstrap:
                 service_key = d["service"]
                 service_name = services[service_key]["name"]
                 request = CreateDashboardRequest(name = key,
-                                                service = service_name,
-                                                description = d.get("description"),
+                                                 service = service_name,
+                                                 description = d.get("description"),
                                             )
                 dashboard = self.client.create_or_update(request)
                 self.entities[key] = dashboard
@@ -360,7 +357,7 @@ class MetadataBootstrap:
 
                 request = AddLineageRequest(edge={
                                 "fromEntity": EntityReference(id = src.id,
-                                                            type = src_type
+                                                              type = src_type
                                                             ),
                                 "toEntity": EntityReference(id = tgt.id,
                                                             type = tgt_type
@@ -372,37 +369,44 @@ class MetadataBootstrap:
             logger.error(f"Error creating lineage: {e}")
             raise
 
-    # --------------------------------------------------
-    # RUN
-    # --------------------------------------------------
-    def run(self) -> None:
-        """
-        Execute the complete metadata registration workflow.
-        Orchestrates all creation steps in the correct order to ensure
-        dependencies are satisfied before entities are referenced.
-        """
-        self.create_services()
-        self.create_containers()
-        self.create_source_tables()
-        self.create_tables()
-        self.create_dashboard()
-        self.create_lineage()
+# ---------------------------------------------------------------------
+# Main Workflow Function
+# ---------------------------------------------------------------------
+def metadata_setup(config_path: str = "configs/metadata_registry.yaml") -> None:
+    """
+    Orchestrate the complete OpenMetadata registration workflow.
+    1. Loads configuration from YAML file
+    2. Initializes OpenMetadata client
+    3. Creates all services (BigQuery, PostgreSQL, GCS, PowerBI)
+    4. Creates GCS containers for medallion layers
+    5. Creates BigQuery source tables
+    6. Creates PostgreSQL gold table with complete schema
+    7. Creates PowerBI dashboard entity
+    8. Establishes lineage relationships between all entities
+    Args:
+        config_path: Path to YAML configuration file with OpenMetadata settings
+    Raises:
+        Exception: If any critical step in the workflow fails
+    """
+    try:
+        # Load configuration
+        registry = Registry(config_path)
+        # Initialize OpenMetadata client
+        om_client = OMClient(config_path)
+        # Create metadata bootstrap instance
+        bootstrap = MetadataBootstrap(om_client.client, 
+                                      registry)
+        # Execute all creation steps in order
+        bootstrap.create_services()
+        bootstrap.create_containers()
+        bootstrap.create_source_tables()
+        bootstrap.create_tables()
+        bootstrap.create_dashboard()
+        bootstrap.create_lineage()
         print("Metadata completed")
-
-# --------------------------------------------------
-# MAIN
-# --------------------------------------------------
-def metadata_setup() -> None:
-    """
-    Main entry point for metadata registration.
-    Loads configuration, initializes client and bootstrap, and runs the
-    complete metadata registration workflow.
-    """
-    registry = Registry("configs/metadata_registry.yaml")
-    om = OMClient("configs/metadata_registry.yaml")
-    bootstrap = MetadataBootstrap(om.client, 
-                                  registry)
-    bootstrap.run()
+    except Exception as e:
+        logger.error(f"Metadata registration failed: {e}")
+        raise
 
 if __name__ == "__main__":
     metadata_setup()
