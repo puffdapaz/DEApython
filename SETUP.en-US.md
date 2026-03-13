@@ -4,7 +4,17 @@
 
 This guide provides step-by-step instructions to configure the project environment and run the data pipeline.
 
-## Pipeline Architecture
+## Table of Contents
+- [Pipeline architecture](#pipeline-architecture)
+- [Quick Start](#quick-start-tldr)
+- [System requirements](#system-requirements)
+- [Required accounts](#required-accounts)
+- [Environment variables](#environment-variables)
+- [Run the pipeline](#run-the-pipelinee)
+- [Expected project structure](#expected-project-structure)
+- [Data visualization](#data-visualization)
+
+## Pipeline architecture
 - Data pipeline flow:
     Raw Data → Bronze → Silver → Gold → Warehouse → BI
 - Full project diagram:
@@ -28,7 +38,7 @@ This guide provides step-by-step instructions to configure the project environme
 ```
 **For full instructions see the sections below.**
 
-## System Requirements
+## System requirements
 - Install the tools below:
 ### Git
 - **Windows**:
@@ -85,10 +95,10 @@ Docker Desktop on Windows requires WSL2 for proper performance.
 - More information:
     https://learn.microsoft.com/windows/wsl/install
 
-## Required Accounts
+## Required accounts
 The project uses external services.
 
-### BasedosDados
+### Basedosdados
 - Access to the Brazilian public data lake.
 https://basedosdados.org/
 - Documentation:
@@ -108,7 +118,7 @@ Used as the **Data Warehouse**.
     https://neon.tech/
 - Copy the database connection string.
 
-## Environment Variables
+## Environment variables
 - Create the `.env` file.
 ```
 billing_project_id = "yourproject"
@@ -130,7 +140,7 @@ POWERBI_CLIENT_SECRET = "client_hash"
 POWERBI_TENANT_ID = "client_hash"
 ```
 
-## Run and obtain OpenMetadata JWT token
+### Run and obtain OpenMetadata JWT token
 - Start the metadata catalog:
 ```
     docker compose up -d
@@ -147,7 +157,7 @@ POWERBI_TENANT_ID = "client_hash"
     python main.py
 ```
 
-## Expected Project Structure
+## Expected project structure
 ```
 DEApython/
 ├── configs/                  # YAML configuration files
@@ -182,7 +192,7 @@ DEApython/
 └── SETUP.pt-BR.md            # Setup instructions (pt_BR)
 ```
 
-## Data Visualization
+## Data visualization
 Final datasets are loaded into **Neon Postgres**.
 - Compatible tools:
     - Power BI

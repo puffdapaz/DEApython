@@ -4,13 +4,23 @@
 
 Este guia fornece instruções passo a passo para configurar o ambiente do projeto e executar o pipeline de dados.
 
-## Arquitetura do Pipeline
+## Sumário
+- [Arquitetura do pipeline](#arquitetura-do-pipeline)
+- [Inicialização rápida](#inicialização-rápida-tldr)
+- [Requisitos do sistema](#requisitos-do-sistema)
+- [Contas necessárias](#contas-necessárias)
+- [Variáveis de ambiente](#variáveis-de-ambiente)
+- [Executar pipeline](#executar-pipeline)
+- [Estrutura esperada](#estrutura-esperada)
+- [Visualização de Dados](#visualização-de-dados)
+
+## Arquitetura do pipeline
 - Fluxo do pipeline de dados:
     Dados Brutos → Bronze → Silver → Gold → Warehouse → BI
 - Diagrama completo do projeto:
     [Ver diagrama completo](project_diagram.md)
 
-## Inicialização Rápida (TL;DR)
+## Inicialização rápida (TL;DR)
 - Clone o repositório e execute o pipeline:
 ```
     git clone https://github.com/puffdapaz/DEApython.git
@@ -85,10 +95,10 @@ O Docker Desktop no Windows requer WSL2 para performance adequada.
 - Mais informações:
     https://learn.microsoft.com/pt-br/windows/wsl/install
 
-## Contas Necessárias
+## Contas necessárias
 O projeto utiliza serviços externos.
 
-### BasedosDados
+### Basedosdados
 - Acesso ao datalake com dados públicos do Brasil.
     https://basedosdados.org/
 - Documentação:
@@ -130,7 +140,7 @@ Usado como **Data Warehouse**.
     POWERBI_TENANT_ID = "client_hash"
 ```
 
-## Executar e obter token JWT do OpenMetadata 
+### Executar e obter token JWT do OpenMetadata 
 - Subir catálogo de metadata:
 ```
     docker compose up -d
