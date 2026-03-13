@@ -10,7 +10,7 @@ This guide provides step-by-step instructions to configure the project environme
 - [System requirements](#system-requirements)
 - [Required accounts](#required-accounts)
 - [Environment variables](#environment-variables)
-- [Run the pipeline](#run-the-pipelinee)
+- [Run the pipeline](#run-the-pipeline)
 - [Expected project structure](#expected-project-structure)
 - [Data visualization](#data-visualization)
 
