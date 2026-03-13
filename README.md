@@ -4,6 +4,6 @@
 
 # README
 
-[![pt-br](https://img.shields.io/badge/lang-pt--br-green.svg)](https://github.com/puffdapaz/DEApython/blob/main/README.pt-BR.md)
+[![pt-br](https://img.shields.io/badge/lang-pt--br-green.svg)](README.pt-BR.md)
 
-[![en-us](https://img.shields.io/badge/lang-en--us-red.svg)](https://github.com/puffdapaz/DEApython/blob/main/README.en-US.md)
+[![en-us](https://img.shields.io/badge/lang-en--us-red.svg)](README.en-US.md)

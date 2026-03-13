@@ -87,8 +87,8 @@ classDef persist fill:#424242,stroke:#212121,stroke-width:3px,color:#FFFFFF,font
 
   CFG --> G_DEA
   ENV --> G_DEA
-  G_DEA --> G_VALIDATE --> ANALYTICS 
-  ANALYTICS --> G_SAVE
+  G_DEA --> ANALYTICS --> 
+  G_VALIDATE --> G_SAVE
 
   B_SAVE --> STORAGE
   S_SAVE --> STORAGE
