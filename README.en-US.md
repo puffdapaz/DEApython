@@ -2,7 +2,7 @@
 
 [![pt-br](https://img.shields.io/badge/lang-pt--br-green.svg)](https://github.com/puffdapaz/DEApython/blob/main/README.pt-BR.md)
 
-[![App](https://img.shields.io/badge/Streamlit-FF4B4B.svg?style=for-the-badge&logo=Streamlit&logoColor=white)]()
+[![App](https://custom-icon-badges.demolab.com/badge/Power%20BI-F1C912?logo=power-bi&logoColor=fff)](https://app.powerbi.com/view?r=eyJrIjoiMmU1ZDJkYjItNTM2NS00ZWFiLWFhNTAtYzE5ZjRkZTBiZjcyIiwidCI6ImFlMTJhMzE4LWQxYjgtNGQ5My04NTBmLTQ3ZWFkMzYwMmM2NiJ9)
 
 ## Efficiency of public spending on education in Brazilian municipalities applying Data Envelopment Analysis
 
@@ -26,11 +26,16 @@
 ## Project
 The goal of this project is to improve the use of good practices in Python for data engineering, analysis, and science through the replication and enhancement of a research study conducted in 2023, published as a scientific paper based on public social data.<br/>
 The study evaluates the technical and scale efficiency of Brazilian municipalities regarding the allocation of public resources to education in 2017 and 2019, applying the DEA (Data Envelopment Analysis) model.<br/>
-In addition to reproducing the econometric model, the project implements a modular data processing pipeline (Medallion Architecture), ensuring traceability, schema validation, and local and cloud storage.<br/>
+In addition to reproducing the econometric model, the project implements a modular lakehouse data processing pipeline with:<br/>
+ - Medallion architecture with parquet locally and at [GCS Cloud storage](https://cloud.google.com/storage);<br/>
+ - Schema validation with [Pandera](https://github.com/unionai-oss/pandera);<br/>
+ - Serverless warehousing at [Neon PostgreSQL](https://neon.com);<br/>
+ - Data lineage and metadata at [OpenMetadata](https://open-metadata.org);<br/>
+ - Dashboard visualization with [Power BI](www.microsoft.com/power-platform/products/power-bi).<br/>
 
 ## Code
 1. **Bronze Layer**<br/>
-The flow begins with data extraction using the [basedosdados SDK](https://basedosdados.org), organization, [table consistency validation](https://www.union.ai/pandera), and storage in .parquet format in a local directory and in [GCS](https://cloud.google.com/storage) in the bronze layer, as DataFrames in their original/raw structure, without any modification.<br/>
+The flow begins with data extraction using the [basedosdados BigQuery datalake](https://basedosdados.org), organization, table consistency validation, and storage in .parquet format in a local directory and in a [GCS bucket](https://cloud.google.com/storage) on bronze layer, as DataFrames in their original/raw structure, without any modification.<br/>
 The data collected are at the municipal level and refer to the years 2017 and 2019 for Elementary Education:<br/>
 - Population;<br/>
 - GDP;<br/>
@@ -50,44 +55,47 @@ The tables go through a transformation process, being combined into a single Dat
 - Spending per Student (Education Spending / Number of Enrollments);<br/>
 - % of GDP in Education (Education Spending / GDP);<br/>
 - Data completeness flag by city.<br/>
-The DataFrame undergoes descriptive and correlation analysis and is also [validated](https://www.union.ai/pandera) regarding fields and data types, and finally stored in .parquet format in a local directory and in [GCS](https://cloud.google.com/storage) in the silver layer.<br/>
+The DataFrame undergoes descriptive and correlation analysis and is also validated regarding fields and data types, and finally stored in .parquet format in a local directory and in a [GCS bucket](https://cloud.google.com/storage) on silver layer.<br/>
 
-3. **Gold Layer**<br/>
-At this stage, the flow starts from the DataFrame saved in the previous step (silver). The data are filtered by the data completeness field, and the relevant fields are extracted and organized into matrices to be modeled.<br/>
+3. **Geographic Features**<br/>
+The municipal geographic polygons are then obtained using [geobr](https://github.com/ipeaGIT/geobr) and again by the Municipality Code established by [IBGE](https://servicodados.ibge.gov.br/api/docs/), merged with the socioeconomic information centralized in the DataFrame saved on silver layer.<br/>
+
+4. **Gold Layer**<br/>
+At this stage, the flow starts from the DataFrame saved in the previous step (silver). The data is filtered by the data completeness field, and the relevant fields are extracted and organized into matrices to be modeled using DEA.<br/>
 \* The Dropout Rate fields are converted for modeling adjustment since higher dropout rates indicate worse performance. Unlike the original study, which used the ratio '*1/rate*' for adjustment, this project converts the rate using '*100 - rate*' base.<br/>
 
 The [dealib](https://github.com/ArtyomViryutin/dealib) model is then applied to the matrices, and additional fields are calculated based on the results:<br/>
 - Scale efficiency (Constant Return Input-Oriented / Variable Return Input-Oriented);<br/>
 - Classification of Returns Nature.<br/>
 
-4. **Additional Metrics**<br/>
+5. **Additional Metrics**<br/>
 There is an additional step for calculating metrics used in visual interpretation of the results:<br/>
-- Annual efficiency ranking;<br/>
-- Percent variation between periods;<br/>
-- Classification:<br/>
-    - Technical efficiency classes;<br/>
-    - Scale efficiency classes;<br/>
-- Variation:<br/>
-    - Comparison with the median technical efficiency of the year;<br/>
-    - Comparison with the median scale efficiency of the year;<br/>
-    - Comparison with the state average technical efficiency of the year;<br/>
-    - Comparison with the state average scale efficiency of the year;<br/>
-- Clustering by characteristics.<br/>
-The results and additional calculated fields are aggregated into the main DataFrame, which undergoes descriptive and correlation analysis, as well as statistical tests (Normality, Distribution, and t-test), and [validação](https://www.union.ai/pandera) regarding fields, values, and data types.<br/>
-The DataFrame, the descriptive summary (both in .parquet format), and the statistical test results (in .json format) are stored in a local directory and in [GCS](https://cloud.google.com/storage) in the gold layer.<br/>
+- Yearly National VRS Input Median;<br/>
+- Yearly State VRS Input Average;<br/>
+- Yearly VRS Input National Ranking;<br/>
+- Yearly VRS Input State Ranking.<br/>
+The results and additional calculated fields are aggregated into the main DataFrame, which undergoes descriptive and correlation analysis, as well as statistical tests (Normality, Distribution, and t-test), and validation regarding fields, values, and data types.<br/>
+The DataFrame, the descriptive summary (both in .parquet format), and the statistical test results (in .json format) are stored in a local directory, in a [GCS bucket](https://cloud.google.com/storage) on gold layer and at a [Neon PostgreSQL serverless warehouse](https://neon.com).<br/>
 
-5. ****<br/>
-The municipal geographic polygons are then obtained using geobr
- and again through the Municipality Code established by IBGE
-, consolidating the socioeconomic information centralized in the DataFrame saved in the Gold layer, with the geographic coordinates.<br/>
+6. **Metadata**<br/>
+There is an additional step registering metadata of the project based on validation schemas ([Pandera](https://github.com/unionai-oss/pandera)) to ensure metadata matches the project actual data structures. [OpenMetadata](https://open-metadata.org) creates and manages all DEA project metadata entities linked:<br/>
+- Datalake source tables ([BigQuery basedosdados](https://basedosdados.org));<br/>
+- Storage services ([GCS bronze, silver and gold layers](https://cloud.google.com/storage));<br/>
+- Gold dataset ([Neon PostgreSQL DataWarehouse](https://neon.com));<br/>
+- Dashboard service ([Power BI dashboard](https://app.powerbi.com/view?r=eyJrIjoiMmU1ZDJkYjItNTM2NS00ZWFiLWFhNTAtYzE5ZjRkZTBiZjcyIiwidCI6ImFlMTJhMzE4LWQxYjgtNGQ5My04NTBmLTQ3ZWFkMzYwMmM2NiJ9));<br/>
+- Lineage relationships between all entities.<br/>
 
-6. ****<br/>
-With the completion of data processing, the DataFrame is made available for consumption in Business Intelligence tools. For [illustration](link powerbi), histograms of the selected variables, a scatter plot between HDI and Tax Burden with a trend line, a correlation heatmap, and a map are displayed.<br/>
+7. **Visuals**<br/>
+With the completion of data processing, the DataFrame is then available for consumption in [Neon PostgreSQL serverless warehouse](https://neon.com) by a [Power BI dashboard](https://app.powerbi.com/view?r=eyJrIjoiMmU1ZDJkYjItNTM2NS00ZWFiLWFhNTAtYzE5ZjRkZTBiZjcyIiwidCI6ImFlMTJhMzE4LWQxYjgtNGQ5My04NTBmLTQ3ZWFkMzYwMmM2NiJ9).<br/>
 
 ## Methods
 ### **CRS** — *Constant Returns to Scale*
 - CCR Model by Charnes, Cooper, and Rhodes;<br/>
 ### **VRS** — *Variable Returns to Scale*
+- BCC Model by Banker, Charnes, and Cooper;<br/>
+### **IRS** — *Increasing returns to scale*
+- BCC Model by Banker, Charnes, and Cooper;<br/>
+### **DRS** — *Decreasing returns to scale*
 - BCC Model by Banker, Charnes, and Cooper;<br/>
 ### **Input-Oriented**
 - Seeks to minimize inputs for a given level of output;<br/>
@@ -127,9 +135,9 @@ With the completion of data processing, the DataFrame is made available for cons
 Extending the study to more municipalities reinforced the results obtained in the original research in 2023.<br/>
 >"... Excellence in input management does not necessarily mean increasing investment per student or the overall budget, but rather seeking the least possible use of resources while aiming for social well-being; it is up to decision-makers to continuously apply themselves, regardless of favorable scenarios, respecting socioeconomic demands and ensuring basic access conditions for students.
 ><br/>
->Improving spending management involves not only investing in education but ensuring equity in opportunities."
+>Improving spending management involves not only investing in education but ensuring equity in opportunities."<br/>
 
-Only 52% of the municipalities presented all the information in the time frame, composing the sample (2891 cities).
+Only 52% of the municipalities presented all the information in the time frame, composing the sample (2891 cities).<br/>
 Statistical tests show three main conclusions: scale efficiency data do not follow a normal distribution (Shapiro–Wilk test, p < 10⁻⁴¹), the mean scale efficiency is significantly different from 1 (t-test, p = 0.0), and the distributions between CRS/VRS and IRS/DRS are significantly different (Kolmogorov–Smirnov test, p < 10⁻⁴³). The very low p-values (< 0.05) indicate high confidence that these differences are statistically significant.<br/>
 
 On average, municipalities showed a slight increase in GDP, education spending, and GDP per capita by 2019, as well as improvements in IDEB scores and reduced dropout rates. DEA efficiency scores remained relatively stable, with VRS efficiency around 0.52 in 2019, indicating moderate resource-use efficiency.<br/>

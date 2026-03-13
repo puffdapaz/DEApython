@@ -1,91 +1,194 @@
-# Project Setup Guide
+# DEApython Project Setup Guide
 
-[![pt-br](https://img.shields.io/badge/lang-pt--br-green.svg)](https://github.com/puffdapaz/DEApython/blob/main/SETUP.pt-BR.md)
+[![pt-br](https://img.shields.io/badge/lang-pt--br-green.svg)](SETUP.pt-BR.md)
 
-### This guide provides step-by-step instructions to set up the project environment and run the data pipeline.
+This guide provides step-by-step instructions to configure the project environment and run the data pipeline.
 
-## Prerequisites
+## Pipeline Architecture
+- Data pipeline flow:
+    Raw Data → Bronze → Silver → Gold → Warehouse → BI
+- Full project diagram:
+    [View full diagram](project_diagram.md)
 
-### 1. Install Git
-- **Windows**: Download at [git-scm.com](https://git-scm.com/)<br/>
-- **macOS**: Already included or install via Homebrew: `brew install git`<br/>
-- **Linux**: `sudo apt install git` (Ubuntu/Debian)<br/>
+## Quick Start (TL;DR)
+- Clone the repository and run the pipeline:
+```
+    git clone https://github.com/puffdapaz/DEApython.git
+    cd DEApython
+    pip install uv
+    uv venv
+# Windows:
+    .venv\Scripts\activate
+# macOS:
+    source .venv/bin/activate
 
-### 2. Install python 3.9 or newer
-- Download at official site: [python.org/downloads](https://www.python.org/downloads/)<br/>
-- **Important**: When installing, check the option **"Add python to PATH"**<br/>
-- Check installation after completing:<br/>
-In command prompt (Windows) or Terminal (macOS/Linux) type:<br/>
-`bash`<br/>
-`python --version`<br/>
-`pip --version`<br/>
+    uv pip install -r requirements.txt
+    cp .env.example .env
+    python main.py
+```
+**For full instructions see the sections below.**
 
-### 3. Clone the repository
-- In command prompt (Windows) or Terminal (macOS/Linux) type:<br/>
-`bash`<br/>
-`git clone https://github.com/puffdapaz/DEApython.git`<br/>
-`cd DEApython`<br/>
+## System Requirements
+- Install the tools below:
+### Git
+- **Windows**:
+    https://git-scm.com/
+- **macOS**:
+```
+    brew install git
+```
+- **Linux**:
+```
+    sudo apt install git
+```
+- Verify:
+```
+    git --version
+```
 
-### 4. Set up a virtual environment
-- In command prompt (Windows) or Terminal (macOS/Linux) type:<br/>
-Navigate to your project folder:<br/>
-`cd address/directory/folder/`<br/>
+### Python 3.9+
+- Install Python:
+    https://www.python.org/downloads/
+- During installation on Windows check:
+    Add Python to PATH
+- Verify:
+```
+    python --version
+    pip --version
+```
 
-- Create a virtual environment called venv:<br/>
-`python -m venv venv` <br/>
+### UV (dependency manager)
+- Install:
+```
+    pip install uv
+```
+- Verify:
+```
+    uv --version
+```
 
-- Activate the virtual environment: <br/>
-On Windows: `.\venv\Scripts\activate`<br/>
-On macOS/Linux: `source venv/bin/activate`<br/>
+### Docker Desktop
+Required to run **OpenMetadata**.
+- Download:
+    https://www.docker.com/products/docker-desktop/
+- Verify:
+```
+    docker --version
+```
 
-### 5. Configure Environment Variables
-- Create `.env` file in root directory, containing parameters:<br/>
-    - GCS account for storage: `billing_project_id=your_gcp_project`<br/>
-    - GCS bucket for storage: `gcp_bucket_name=your_gcs_bucket`<br/>
-    - Reference for credentials: `google_application_credentials=credentials/gcp_key.json`<br/>
+### Windows - WSL2 Configuration
+Docker Desktop on Windows requires WSL2 for proper performance.
+- Enable WSL2:
+```
+    wsl --install
+```
+- More information:
+    https://learn.microsoft.com/windows/wsl/install
 
-### 6. Install dependencies
-- In command prompt (Windows) or Terminal (macOS/Linux) type:<br/>
-`pip install .`<br/>
-or<br/>
-`pip install -r requirements.txt`<br/>
+## Required Accounts
+The project uses external services.
 
-### 7. Running the code
-- In command prompt (Windows) or Terminal (macOS/Linux) type:<br/>
-`python main.py`<br/>
+### BasedosDados
+- Access to the Brazilian public data lake.
+https://basedosdados.org/
+- Documentation:
+https://docs.basedosdados.org/
 
-### 8. Expected Project Structure
-After successful execution, your folder should contain:<br/>
+### Google Cloud Platform
+Used for storage in **Google Cloud Storage**.
+    https://cloud.google.com/
+You will need to:
+    - Create a project;
+    - Create a GCS bucket;
+    - Create a service account;
+    - Download the JSON key and save it as `credentials/deapython_gcp_key.json`.
 
+### Neon Postgres
+Used as the **Data Warehouse**.
+    https://neon.tech/
+- Copy the database connection string.
+
+## Environment Variables
+- Create the `.env` file.
+```
+billing_project_id = "yourproject"
+gcp_bucket_name = "deapython"
+google_application_credentials = credentials/deapython_gcp_key.json
+
+NEON_USER = "neondb_owner"
+NEON_PASSWORD = "password"
+NEON_HOST = "xx-xxxxx-xxx-########-xxxxx.c-2.us-region-1.aws.neon.tech"
+NEON_PORT = "port"
+NEON_DATABASE = "neondb"
+
+OPENMETADATA_JWT_TOKEN = "yourtoken"
+OPENMETADATA_HOST = "http://###.##.###.##:8585/api"
+
+Optional (Power BI)
+POWERBI_CLIENT_ID = "client_hash"
+POWERBI_CLIENT_SECRET = "client_hash"
+POWERBI_TENANT_ID = "client_hash"
+```
+
+## Run and obtain OpenMetadata JWT token
+- Start the metadata catalog:
+```
+    docker compose up -d
+```
+- Interface available at:
+    http://localhost:8585
+- Login:
+    admin@open-metadata.org / admin
+- Go to **Settings → Bots → ingestion-bot**
+    click **Generate new token** and copy it to the `.env` file.
+
+## Run the pipeline
+```
+    python main.py
+```
+
+## Expected Project Structure
 ```
 DEApython/
-├── configs/                  # YAML files with parameters
-├── credentials/              # gcp_key.json (need to create)
-├── docs/                     # Original paper
-├── data/                     # Organized data (automatically generated)
-│   ├── bronze/               # Raw data
-│   ├── silver/               # Processed data  
-│   └── gold/                 # Final results
+├── configs/                  # YAML configuration files
+├── credentials/              # gcp_key.json (must be created)
+├── data/                     # Processed data (generated automatically)
+│   ├── raw/                  # Raw data
+│   └── processed/            # Processed data
+│       ├── gold/             # Modeled data and results
+│       └── silver/           # Aggregated data
+├── docs/                     # Original article
 ├── etl/                      # ETL pipeline code
-│   ├── bronze_ingestion.py   # Ingestion Flow
-│   ├── silver_processing.py  # Processing Flow
-│   ├── gold_modeling.py      # Modeling Flow
-│   ├── dash_metrics.py       # Metrics Flow
-│   ├── diagnostics/          # Validation and Diagnostic Functions
-│   └── save_utils/           # Storage Functions
-├── .env                      # Environment Variables (need to create)
-├── .gitignore                # Repository file filter
-├── CITATION.cff              # Citations and Credits
-├── main.py                   # Project entrypoint
-├── project_diagram.md        # Project diagram flow
-├── pyproject.toml            # Premises and conditions
-├── README.en-US.md           # Project Description (en_US)
-├── README.md                 # Language option for Description
-├── README.pt-BR.md           # Project Description (pt_BR)
+│   ├── diagnostics/          # Validation and diagnostics
+│   ├── save_utils/           # Storage and publishing utilities
+│   ├── bronze_ingestion.py   # Ingestion workflow
+│   ├── silver_processing.py  # Processing workflow
+│   ├── gold_modeling.py      # Modeling workflow
+│   ├── dash_metrics.py       # Metrics workflow
+│   └── geodata.py            # Validation and diagnostic functions
+├── openmetadata/             # Metadata catalog configuration
+├── .env                      # Environment variables (must be created)
+├── .gitignore                # Repository ignore rules
+├── CITATION.cff              # Citation information
+├── main.py                   # Project entry point
+├── project_diagram.md        # Pipeline diagram
+├── pyproject.toml            # Project configuration
+├── README.en-US.md           # Project description (en_US)
+├── README.md                 # Language selector
+├── README.pt-BR.md           # Project description (pt_BR)
 ├── requirements.txt          # Project dependencies
-├── SETUP.en-US.md            # Installation Instructions (en_US)
-├── SETUP.md                  # Language option for Instructions
-└── SETUP.pt-BR.md            # Installation Instructions (pt_BR)
+├── SETUP.en-US.md            # Setup instructions (en_US)
+├── SETUP.md                  # Language selector
+└── SETUP.pt-BR.md            # Setup instructions (pt_BR)
 ```
 
-There is [README](https://github.com/puffdapaz/DEApython/blob/main/README.en-US.md) file with additional support. Do not hesitate to ask for help.<br/>
+## Data Visualization
+Final datasets are loaded into **Neon Postgres**.
+- Compatible tools:
+    - Power BI
+    - Metabase
+    - Tableau
+    - DBeaver
+    - pgAdmin
+
+See the [README](README.en-US.md) for additional information and support. Feel free to ask questions if needed.

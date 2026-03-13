@@ -1,78 +1,173 @@
-# Guia de configuração para replicar o Projeto
+# Guia de configuração para replicar o Projeto DEApython
 
-[![en-us](https://img.shields.io/badge/lang-en--us-red.svg)](https://github.com/puffdapaz/DEApython/blob/main/SETUP.en-US.md)
+[![en-us](https://img.shields.io/badge/lang-en--us-red.svg)](SETUP.en-US.md)
 
-### Este guia fornece instruções passo a passo para configurar o ambiente do projeto e executar o pipeline de dados.
+Este guia fornece instruções passo a passo para configurar o ambiente do projeto e executar o pipeline de dados.
 
-## Pré-requisitos
+## Arquitetura do Pipeline
+- Fluxo do pipeline de dados:
+    Dados Brutos → Bronze → Silver → Gold → Warehouse → BI
+- Diagrama completo do projeto:
+    [Ver diagrama completo](project_diagram.md)
 
-### 1. Instalar Git
-- **Windows**: Baixe em [git-scm.com](https://git-scm.com/)<br/>
-- **macOS**: Já incluso ou instale via Homebrew: `brew install git`<br/>
-- **Linux**: `sudo apt install git` (Ubuntu/Debian)<br/>
+## Inicialização Rápida (TL;DR)
+- Clone o repositório e execute o pipeline:
+```
+    git clone https://github.com/puffdapaz/DEApython.git
+    cd DEApython
+    pip install uv
+    uv venv
+# Windows:
+    .venv\Scripts\activate
+# macOS:
+    source .venv/bin/activate
 
-### 2. Instalar python 3.9 ou superior
-- Baixe no site oficial: [python.org/downloads](https://www.python.org/downloads/)<br/>
-- **Importante**: Durante a instalação, marque a opção **"Add python to PATH"**<br/>
-- Verifique a instalação após concluir:<br/>
-No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
-`bash`<br/>
-`python --version`<br/>
-`pip --version`<br/>
+    uv pip install -r requirements.txt
+    cp .env.example .env
+    python main.py
+```
+**Para instruções completas veja as seções abaixo.**
 
-### 3. Clonar o repositório
-- No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
-`bash`<br/>
-`git clone https://github.com/puffdapaz/DEApython.git`<br/>
-`cd DEApython`<br/>
+## Requisitos do sistema
+- Instale as ferramentas abaixo:
+### Git
+- **Windows**:
+    https://git-scm.com/
+- **macOS**:
+```
+    brew install git
+```
+- **Linux**:
+```
+    sudo apt install git
+```
+- Verificar:
+```
+    git --version
+```
 
-### 4. Configurar um ambiente virtual
-- No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
-Navegue até a pasta do seu projeto:<br/>
-`cd endereço/diretório/pasta/`<br/>
+### Python 3.9+
+- Instale python:
+    https://www.python.org/downloads/
+- Durante instalação no Windows marque:
+    Add Python to PATH
+- Verificar:
+```
+    python --version
+    pip --version
+```
 
-- Crie um ambiente virtual chamado venv:<br/>
-`python -m venv venv`<br/>
+### UV (gerenciador de dependências)
+- Instalar:
+```
+    pip install uv
+```
+- Verificar:
+```
+    uv --version
+```
 
-- Ative o ambiente virtual: <br/>
-No Windows: `.\venv\Scripts\activate`<br/>
-No macOS/Linux: `source venv/bin/activate`<br/>
+### Docker Desktop
+Necessário para executar **OpenMetadata**.
+- Download:
+    https://www.docker.com/products/docker-desktop/
+- Verificar:
+```
+    docker --version
+```
 
-### 5. Configurar Variáveis de Ambiente
-- Criação de arquivo `.env` no diretório raiz, contendo parâmetros:<br/>
-  - Conta GCS para armazenamento: `billing_project_id=seu_projeto_no_gcp`<br/>
-  - Bucket GCS para armazenamento: `gcp_bucket_name=seu_bucket_gcs`<br/>
-  - Referência para credenciais: `google_application_credentials=credentials/gcp_key.json`<br/>
+### Windows - Configuração do WSL2
+O Docker Desktop no Windows requer WSL2 para performance adequada.
+- Ative o WSL2:
+```
+    wsl --install
+```
+- Mais informações:
+    https://learn.microsoft.com/pt-br/windows/wsl/install
 
-### 6. Instalação das dependências
-- No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
-`pip install .`<br/>
-ou<br/>
-`pip install -r requirements.txt`<br/>
+## Contas Necessárias
+O projeto utiliza serviços externos.
 
-### 7. Executando o código
-- No prompt de comando (Windows) ou Terminal (macOS/Linux) digite:<br/>
-`python main.py`<br/>
+### BasedosDados
+- Acesso ao datalake com dados públicos do Brasil.
+    https://basedosdados.org/
+- Documentação:
+    https://docs.basedosdados.org/
 
-### 8. Estrutura Esperada do Projeto
-Após a execução bem-sucedida, sua pasta deve conter:<br/>
+### Google Cloud Platform
+Usado para armazenamento no **Google Cloud Storage**.
+    https://cloud.google.com/
+Você precisará:
+  - Criar um projeto;
+  - Criar um bucket GCS;
+  - Criar uma service account;
+  - Baixar a chave JSON e salvar como `credentials/deapython_gcp_key.json`.
+
+### Neon Postgres
+Usado como **Data Warehouse**.
+    https://neon.tech/
+- Copie a connection string do banco.
+
+## Variáveis de ambiente
+- Crie o arquivo `.env`.
+```
+    billing_project_id = "seuprojeto"
+    gcp_bucket_name = "deapython"
+    google_application_credentials = credentials/deapython_gcp_key.json
+
+    NEON_USER = "neondb_owner"
+    NEON_PASSWORD = "senha"
+    NEON_HOST = "xx-xxxxx-xxx-########-xxxxx.c-2.us-region-1.aws.neon.tech"
+    NEON_PORT = "porta"
+    NEON_DATABASE = "neondb"
+
+    OPENMETADATA_JWT_TOKEN = "seutoken"
+    OPENMETADATA_HOST = "http://###.##.###.##:8585/api"
+
+    Opcionais (Power BI)
+    POWERBI_CLIENT_ID = "client_hash"
+    POWERBI_CLIENT_SECRET = "client_hash"
+    POWERBI_TENANT_ID = "client_hash"
+```
+
+## Executar e obter token JWT do OpenMetadata 
+- Subir catálogo de metadata:
+```
+    docker compose up -d
+```
+- Interface disponível:
+    http://localhost:8585
+- Login: 
+    admin@open-metadata.org / admin
+- Vá em **Settings** → **Bots** → **ingestion-bot**
+    clique em **Generate new token** e copie no arquivo .env
+
+## Executar pipeline
+```
+    python main.py
+```
+
+## Estrutura esperada
 
 ```
 DEApython/
 ├── configs/                  # Arquivos YAML com parâmetros
 ├── credentials/              # gcp_key.json (necessario criar)
-├── docs/                     # Artigo original
 ├── data/                     # Dados tratados (gerados automaticamente)
-│   ├── bronze/               # Dados brutos
-│   ├── silver/               # Dados processados
-│   └── gold/                 # Resultados finais
+│   ├── raw/                  # Dados brutos
+│   └── processed/            # Dados processados
+│       ├── gold/             # Dados modelados e resultados
+│       └── silver/           # Dados agregados
+├── docs/                     # Artigo original
 ├── etl/                      # Código do pipeline ETL
+│   ├── diagnostics/          # Validação e diagnósticos
+│   ├── save_utils/           # Armazenagem e disponibilização
 │   ├── bronze_ingestion.py   # Fluxo de Ingestão
 │   ├── silver_processing.py  # Fluxo de Processamento
 │   ├── gold_modeling.py      # Fluxo de Modelagem
 │   ├── dash_metrics.py       # Fluxo de Métricas
-│   ├── diagnostics/          # Funções de Validação e Diagnóstico
-│   └── save_utils/           # Funções de Armazenamento
+│   └── geodata.py            # Funções de Validação e Diagnóstico
+├── openmetadata/             # Registro de metadata
 ├── .env                      # Variáveis de Ambiente (necessário criar)
 ├── .gitignore                # Filtro de arquivos repositório
 ├── CITATION.cff              # Citações e Créditos
@@ -87,5 +182,13 @@ DEApython/
 ├── SETUP.md                  # Opção para linguagem da Instruções
 └── SETUP.pt-BR.md            # Instruções para Instalação (pt_BR)
 ```
+## Visualização de dados
+Os dados finais são carregados no **Neon Postgres**.
+- Ferramentas compatíveis:
+  - Power BI
+  - Metabase
+  - Tableau
+  - DBeaver
+  - pgAdmin
 
-Há arquivo [README](https://github.com/puffdapaz/DEApython/blob/main/README.pt-BR.md) com suporte adicional. Não hesite em pedir ajuda.<br/>
+Há arquivo [README](README.pt-BR.md) com suporte adicional. Não hesite em pedir ajuda.
