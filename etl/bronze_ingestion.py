@@ -11,7 +11,6 @@ import pandas as pd
 import basedosdados as bd
 from typing import Dict
 from pathlib import Path
-from dotenv import load_dotenv
 from .save_utils import save as save
 from .diagnostics.data_validation import schemas, validate_data
 
@@ -48,7 +47,6 @@ def setup_gcp_bd() -> str:
     Raises:
         ValueError: If required environment variables are missing
     """
-    load_dotenv()
     billing_project_id = os.getenv("billing_project_id")
     bucket_name = os.getenv("gcp_bucket_name")
     if not billing_project_id or not bucket_name:

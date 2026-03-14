@@ -14,11 +14,13 @@ from pathlib import Path
 import io
 import pandas as pd
 import yaml
-import psycopg
+import psycopg2
+from dotenv import load_dotenv 
 from sqlalchemy import create_engine, text
 from sqlalchemy import MetaData, Table, Column
 from sqlalchemy.sql.sqltypes import BigInteger, Float, String
 
+load_dotenv()
 # Set Up Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -45,7 +47,7 @@ NEON_PORT = os.getenv("NEON_PORT", "5432")
 NEON_DATABASE = os.getenv("NEON_DATABASE", "postgres")
 
 # SQLAlchemy DSN (DDL, metadata)
-SQLALCHEMY_DSN = (f"postgresql://{NEON_USER}:{NEON_PASSWORD}"
+SQLALCHEMY_DSN = (f"postgresql+psycopg2://{NEON_USER}:{NEON_PASSWORD}"
                   f"@{NEON_HOST}:{NEON_PORT}/{NEON_DATABASE}"
                 )
 
@@ -66,7 +68,8 @@ def create_engine_sa():
     Create SQLAlchemy engine (DDL / metadata only)
     """
     return create_engine(SQLALCHEMY_DSN,
-                         connect_args = {"sslmode": "require"}
+                         connect_args = {"sslmode": "require"},
+                         future = True,
                         )
         
 def drop_objects(engine):
@@ -144,12 +147,16 @@ def copy_df_to_postgres(df: pd.DataFrame,
                   index = False, 
                   header = False)
         buffer.seek(0)
-        with psycopg.connect(dsn) as conn:
+        conn = psycopg2.connect(dsn)
+        try:
             with conn.cursor() as cur:
-                with cur.copy(
-                    f"COPY {table_name} FROM STDIN WITH (FORMAT CSV)"
-                ) as copy:
-                    copy.write(buffer.getvalue())
+                cur.copy_expert(
+                    f"COPY {table_name} FROM STDIN WITH (FORMAT CSV)",
+                    buffer
+                )
+            conn.commit()
+        finally:
+            conn.close()
     except Exception as e:
         logger.error(f"Failed to copy data to data warehouse: {e}")
         raise

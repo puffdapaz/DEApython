@@ -63,8 +63,8 @@ def eff_rank(df: pd.DataFrame) -> pd.DataFrame:
                     )
 
         # Rows without DEA score → rank = 0
-        df["rank_vrs"] = df["rank_vrs"].fillna(0).astype(int)
-        df["state_rank_vrs"] = df["state_rank_vrs"].fillna(0).astype(int)
+        df["rank_vrs"] = df["rank_vrs"].fillna(0).astype("Int64")
+        df["state_rank_vrs"] = df["state_rank_vrs"].fillna(0).astype("Int64")
 
         return df
     except Exception as e:

@@ -48,15 +48,15 @@ def _save_to_file(obj: Union[pd.DataFrame, dict, str],
                   pd.DataFrame):
         if file_format == "csv":
             obj.to_csv(filepath,
-                       index=False)
+                       index = False)
         elif file_format == "parquet":
             obj.to_parquet(filepath,
-                           index=False)
+                           index = False)
         elif file_format == "json":
             obj.to_json(filepath,
-                        orient="records",
-                        indent=2,
-                        force_ascii=False)
+                        orient = "records",
+                        indent = 2,
+                        force_ascii = False)
         else:
             raise ValueError(f"Unsupported DataFrame format: {file_format}")
     elif isinstance(obj,
