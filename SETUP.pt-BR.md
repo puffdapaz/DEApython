@@ -25,6 +25,7 @@ Este guia fornece instruções passo a passo para configurar o ambiente do proje
 ```
     git clone https://github.com/puffdapaz/DEApython.git
     cd DEApython
+    cp .env.example .env
     pip install uv
     uv venv
 # Windows:
@@ -32,7 +33,7 @@ Este guia fornece instruções passo a passo para configurar o ambiente do proje
 # macOS:
     source .venv/bin/activate
 
-    uv pip install -r requirements.txt
+    uv sync
     cp .env.example .env
     python main.py
 ```
@@ -141,12 +142,50 @@ Usado como **Data Warehouse**.
 ```
 
 ### Executar e obter token JWT do OpenMetadata 
-- Subir catálogo de metadata:
+- Importante: Resolução de Conflito em Portas
+
+O serviço de ingestão do OpenMetadata usa a porta **8080**, que pode conflitar com outros serviços (como chamadas OAuth) no seu ambiente. Caso encontre erros com a porta 8080 ocupada, siga esses passos:
+
+#### Mudar a porta do Airflow
+**Interrompa os containers do OpenMetadata**:
+   ```
+   docker-compose -f docker-compose-postgres.yml down
+   ```
+
+**Modifique o arquivo docker-compose**:
+Abra e edite docker-compose-postgres.yml, encontre o serviço de ingestão e modifique o endereço das portas de:
+
 ```
-    docker compose up -d
+ports:
+  - "8080:8080"
 ```
-- Interface disponível:
-    http://localhost:8585
+para:
+```
+ports:
+  - "8090:8080"
+```
+
+e
+
+```
+environment:
+  - PIPELINE_SERVICE_CLIENT_ENDPOINT=http://ingestion:8080
+```
+para:
+```
+environment:
+  - PIPELINE_SERVICE_CLIENT_ENDPOINT=http://ingestion:8090
+```
+
+Reinicie os containers:
+```
+docker-compose -f docker-compose-postgres.yml up -d
+```
+
+Verifique as modificações:
+Acesse Airflow em: http://localhost:8090
+Acesse OpenMetadata em: http://localhost:8585
+
 - Login: 
     admin@open-metadata.org / admin
 - Vá em **Settings** → **Bots** → **ingestion-bot**

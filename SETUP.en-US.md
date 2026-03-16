@@ -32,7 +32,7 @@ This guide provides step-by-step instructions to configure the project environme
 # macOS:
     source .venv/bin/activate
 
-    uv pip install -r requirements.txt
+    uv sync
     cp .env.example .env
     python main.py
 ```
@@ -141,12 +141,52 @@ POWERBI_TENANT_ID = "client_hash"
 ```
 
 ### Run and obtain OpenMetadata JWT token
-- Start the metadata catalog:
+- Important: Port Conflict Resolution
+
+The OpenMetadata ingestion service uses port **8080**, which may conflict with other services 
+(like local OAuth callbacks) on your machine. If you encounter errors about port 8080 being 
+already in use, follow these steps:
+
+#### Change Airflow Port
+**Stop OpenMetadata containers**:
+   ```
+   docker-compose -f docker-compose-postgres.yml down
+   ```
+
+**Edit the docker-compose file**:
+Open docker-compose-postgres.yml and find the ingestion service. Change the ports mapping from:
+
 ```
-    docker compose up -d
+ports:
+  - "8080:8080"
 ```
-- Interface available at:
-    http://localhost:8585
+to:
+```
+ports:
+  - "8090:8080"
+```
+
+and
+
+```
+environment:
+  - PIPELINE_SERVICE_CLIENT_ENDPOINT=http://ingestion:8080
+```
+to:
+```
+environment:
+  - PIPELINE_SERVICE_CLIENT_ENDPOINT=http://ingestion:8090
+```
+
+Restart the containers:
+```
+docker-compose -f docker-compose-postgres.yml up -d
+```
+
+Verify the change:
+Access Airflow at: http://localhost:8090
+Access OpenMetadata at: http://localhost:8585
+
 - Login:
     admin@open-metadata.org / admin
 - Go to **Settings → Bots → ingestion-bot**

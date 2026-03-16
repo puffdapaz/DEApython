@@ -1,0 +1,16 @@
+billing_project_id = ""
+gcp_bucket_name = ""
+GOOGLE_APPLICATION_CREDENTIALS = "credentials/deapython_gcp_key.json"
+
+NEON_USER = ""
+NEON_PASSWORD = ""
+NEON_HOST = ""
+NEON_PORT = ""
+NEON_DATABASE = ""
+
+OPENMETADATA_JWT_TOKEN = ""
+OPENMETADATA_HOST = ""
+
+POWERBI_CLIENT_ID = ""
+POWERBI_CLIENT_SECRET = ""
+POWERBI_TENANT_ID = ""
