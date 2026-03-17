@@ -53,13 +53,13 @@ As tabelas passam por um processo de transformação, sendo combinadas em um ún
 - Gasto por aluno (Gasto com Educação / Número de Matrículas);
 - % do PIB em Educação (Gasto com Educação / PIB);
 - Indicador de completude dos dados por cidade.
-O DataFrame passa por análise descritiva e de correlação, é validado em relação aos campos e tipos de dados e, finalmente, armazenado em formato .parquet em diretório local e [bucket do GCS](https://cloud.google.com/storage) na camada Silver.
+O DataFrame passa por análise descritiva e de correlação, é validado em relação aos campos e tipos de dados e, finalmente, armazenado em formato .parquet em diretório local e [bucket do GCS](https://cloud.google.com/storage) na camada Prata.
 
 3. **Características Geográficas**
-Os polígonos geográficos municipais são obtidos utilizando o pacote [geobr](https://github.com/ipeaGIT/geobr), e pelo Código Municipal estabelecido pelo [IBGE](https://servicodados.ibge.gov.br/api/docs/), combinados com as informações socioeconômicas centralizadas no DataFrame salvo na camada Silver.
+Os polígonos geográficos municipais são obtidos utilizando o pacote [geobr](https://github.com/ipeaGIT/geobr), e pelo Código Municipal estabelecido pelo [IBGE](https://servicodados.ibge.gov.br/api/docs/), combinados com as informações socioeconômicas centralizadas no DataFrame salvo na camada Prata.
 
-4. **Camada Gold**
-Nesta etapa, o fluxo parte do DataFrame salvo na etapa anterior (camada Silver). Os dados são filtrados pelo campo de completude dos dados, e os campos relevantes são extraídos e organizados em matrizes para serem modelados usando DEA.
+4. **Camada Ouro**
+Nesta etapa, o fluxo parte do DataFrame salvo na etapa anterior (camada Prata). Os dados são filtrados pelo campo de completude dos dados, e os campos relevantes são extraídos e organizados em matrizes para serem modelados usando DEA.
 * Os campos de Taxa de Abandono são convertidos para ajuste de modelagem, uma vez que taxas de abandono mais altas indicam pior desempenho. Ao contrário do estudo original, que usou a razão '*1/taxa*' para ajuste, este projeto converte a taxa usando '*100 - taxa*' como base.
 
 O modelo [dealib](https://github.com/ArtyomViryutin/dealib) é então aplicado às matrizes, e campos adicionais são calculados com base nos resultados:
@@ -73,13 +73,13 @@ Há uma etapa adicional para calcular as métricas usadas na interpretação vis
 - Ranking Nacional Anual do VRS Input;
 - Ranking Estadual Anual do VRS Input.
 Os resultados e os campos calculados adicionais são agregados ao DataFrame principal, que passa por análises descritivas e de correlação, bem como testes estatísticos (Normalidade, Distribuição e teste t) e validação em relação aos campos, valores e tipos de dados.
-O DataFrame, o resumo descritivo (ambos em formato .parquet) e os resultados dos testes estatísticos (em formato .json) são armazenados em diretório local, [bucket do GCS](https://cloud.google.com/storage) na camada Gold e [banco de dados serverless Neon PostgreSQL](https://neon.com).
+O DataFrame, o resumo descritivo (ambos em formato .parquet) e os resultados dos testes estatísticos (em formato .json) são armazenados em diretório local, [bucket do GCS](https://cloud.google.com/storage) na camada Ouro e [banco de dados serverless Neon PostgreSQL](https://neon.com).
 
 6. **Metadados**
 Há uma etapa adicional de registro de metadados do projeto com base em esquemas de validação ([Pandera](https://github.com/unionai-oss/pandera)) para assegurar que os metadados correspondam às estruturas de dados reais do projeto. [OpenMetadata](https://open-metadata.org) cria e gerencia todas as entidades de metadados do projeto DEA encadeadas:
 - Tabelas de origem do Data Lake ([Basedosdados do BigQuery](https://basedosdados.org));
 - Serviço de armazenamento ([Camadas bronze, prata e ouro do GCS](https://cloud.google.com/storage));
-- Dataset Gold ([Neon PostgreSQL DataWarehouse](https://neon.com));
+- Dataset Ouro ([Neon PostgreSQL DataWarehouse](https://neon.com));
 - Painel visual ([Painel Power BI](https://app.powerbi.com/view?r=eyJrIjoiMmU1ZDJkYjItNTM2NS00ZWFiLWFhNTAtYzE5ZjRkZTBiZjcyIiwidCI6ImFlMTJhMzE4LWQxYjgtNGQ5My04NTBmLTQ3ZWFkMzYwMmM2NiJ9));
 - Relações de linhagem entre todas as entidades.
 

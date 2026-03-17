@@ -16,7 +16,7 @@ Este guia fornece instruções passo a passo para configurar o ambiente do proje
 
 ## Arquitetura do pipeline
 - Fluxo do pipeline de dados:
-    Dados Brutos → Bronze → Silver → Gold → Warehouse → BI
+    Dados Brutos → Bronze → Prata → Ouro → Warehouse → BI
 - Diagrama completo do projeto:
     [Ver diagrama completo](project_diagram.md)
 
