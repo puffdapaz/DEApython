@@ -27,11 +27,6 @@ This guide provides step-by-step instructions to configure the project environme
     cd DEApython
     pip install uv
     uv venv
-# Windows:
-    .venv\Scripts\activate
-# macOS:
-    source .venv/bin/activate
-
     uv sync
     cp .env.example .env
     python main.py
@@ -119,7 +114,7 @@ Used as the **Data Warehouse**.
 - Copy the database connection string.
 
 ## Environment variables
-- Create the `.env` file.
+- Edit the `.env` file.
 ```
 billing_project_id = "yourproject"
 gcp_bucket_name = "deapython"
@@ -178,13 +173,10 @@ environment:
   - PIPELINE_SERVICE_CLIENT_ENDPOINT=http://ingestion:8090
 ```
 
-Restart the containers:
-```
-docker-compose -f docker-compose-postgres.yml up -d
-```
+Restart the containers and verify the change:
 
-Verify the change:
 Access Airflow at: http://localhost:8090
+
 Access OpenMetadata at: http://localhost:8585
 
 - Login:
