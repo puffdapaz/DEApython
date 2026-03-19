@@ -25,7 +25,6 @@ Este guia fornece instruções passo a passo para configurar o ambiente do proje
 ```
     git clone https://github.com/puffdapaz/DEApython.git
     cd DEApython
-    cp .env.example .env
     pip install uv
     uv venv
 # Windows:
@@ -57,7 +56,7 @@ Este guia fornece instruções passo a passo para configurar o ambiente do proje
     git --version
 ```
 
-### Python 3.9+
+### Python 3.11+
 - Instale python:
     https://www.python.org/downloads/
 - Durante instalação no Windows marque:

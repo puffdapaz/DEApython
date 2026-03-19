@@ -53,6 +53,7 @@ As tabelas passam por um processo de transformação, sendo combinadas em um ún
 - Gasto por aluno (Gasto com Educação / Número de Matrículas);
 - % do PIB em Educação (Gasto com Educação / PIB);
 - Indicador de completude dos dados por cidade.
+
 O DataFrame passa por análise descritiva e de correlação, é validado em relação aos campos e tipos de dados e, finalmente, armazenado em formato .parquet em diretório local e [bucket do GCS](https://cloud.google.com/storage) na camada Prata.
 
 3. **Características Geográficas**

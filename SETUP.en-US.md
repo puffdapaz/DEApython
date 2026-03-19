@@ -56,7 +56,7 @@ This guide provides step-by-step instructions to configure the project environme
     git --version
 ```
 
-### Python 3.9+
+### Python 3.11+
 - Install Python:
     https://www.python.org/downloads/
 - During installation on Windows check:

@@ -53,6 +53,7 @@ The tables go through a transformation process, being combined into a single Dat
 - Spending per Student (Education Spending / Number of Enrollments);
 - % of GDP in Education (Education Spending / GDP);
 - Data completeness flag by city.
+
 The DataFrame undergoes descriptive and correlation analysis and is also validated regarding fields and data types, and finally stored in .parquet format in a local directory and in a [GCS bucket](https://cloud.google.com/storage) on silver layer.
 
 3. **Geographic Features**
